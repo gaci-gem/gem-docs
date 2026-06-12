@@ -1,0 +1,21 @@
+<div class="sidenav-menu">
+  <ngx-simplebar id="sidenav" class="scrollbar">
+    <!-- User -->
+    <!-- @if (layout.sidenavUser) {
+      <app-user-profile />
+    } -->
+
+    <!--- Sidenav Menu -->
+    <app-menu />
+  </ngx-simplebar>
+  <div class="menu-collapse-box d-none d-xl-block">
+    <button class="button-collapse-toggle mb-2" (click)="openChangelog()">
+      <ng-icon name="lucideSparkles" class=".align-middle flex-shrink-0" />
+      <span>Novedades</span>
+    </button>
+    <button class="button-collapse-toggle" (click)="toggleCollapseMenu()">
+      <ng-icon name="lucideSquareChevronLeft" class=".align-middle flex-shrink-0" />
+      <span>Colapsar Menu</span>
+    </button>
+  </div>
+</div>

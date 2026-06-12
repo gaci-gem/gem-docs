@@ -1,0 +1,28 @@
+{
+  "prioridad": ["cumpleanios", "postAusencia", "horario"],
+  "cumpleanios": [
+    "¡Feliz cumpleaños, {nombre}! 🎂",
+    "¡Hoy es tu día, {nombre}! 🎉",
+    "¡Que cumplas muchos más, {nombre}! 🥳"
+  ],
+  "horario": {
+    "manana": [
+      "¡Buenos días, {nombre}!",
+      "¡Muy buenos días, {nombre}! 🌤️",
+      "¡Arriba ese ánimo, {nombre}! ☀️"
+    ],
+    "tarde": [
+      "¡Buenas tardes, {nombre}!",
+      "¡Hermosa tarde, {nombre}! 🌅"
+    ],
+    "noche": [
+      "¡Buenas noches, {nombre}!",
+      "¡Hermosa noche, {nombre}! 🌙"
+    ]
+  },
+  "postAusencia": [
+    { "minDias": 8,  "mensajes": ["¡Hacía tiempo, {nombre}! 🙌", "¡Qué bueno verte de nuevo, {nombre}!"] },
+    { "minDias": 14, "mensajes": ["¡Ya son dos semanas, {nombre}!", "Dos semanas sin verte, {nombre}! 💪"] },
+    { "minDias": 30, "mensajes": ["¡Un mes sin noticias, {nombre}!", "¡Treinta días, {nombre}! Te extrañamos 🔥"] }
+  ]
+}

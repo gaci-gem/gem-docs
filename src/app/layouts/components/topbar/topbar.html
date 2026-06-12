@@ -1,0 +1,30 @@
+<header class="app-topbar">
+  <div class="container-fluid topbar-menu">
+    <div class="d-flex align-items-center align-items-center gap-2">
+      <div class="logo-topbar">
+        <app-app-logo [logoMaxWidth]="140" />
+      </div>
+
+      <div class="d-lg-none d-flex mx-1">
+        <a routerLink="/">
+          <img [src]="appLogo" height="28" alt="Logo" />
+        </a>
+      </div>
+
+      <button class="button-collapse-toggle d-xl-none" (click)="toggleSidebar()">
+        <ng-icon name="lucideMenu" class="fs-22"></ng-icon>
+      </button>
+
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+
+      <!-- <app-theme-dropdown /> -->
+
+      <app-theme-toggler class="d-none d-sm-flex" />
+
+      <app-user-profile-topbar />
+
+    </div>
+  </div>
+</header>

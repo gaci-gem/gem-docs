@@ -1,0 +1,29 @@
+@if (layout.isLoading) {
+<div class="loading-overlay">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Loading...</span>
+  </div>
+</div>
+}
+
+<div class="wrapper">
+  <app-topbar />
+
+  <app-sidenav />
+
+  <div class="content-page">
+    <!-- Banner de evento en trabajo movido aquí -->
+    <!-- <app-evento-cronometro></app-evento-cronometro> -->
+
+    <app-shortcut-table />
+
+    <!-- <app-greeting-banner /> -->
+
+    <router-outlet />
+
+    <app-footer />
+  </div>
+</div>
+
+<!-- Drawers globales -->
+<!-- <app-drawer-container></app-drawer-container> -->

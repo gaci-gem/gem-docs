@@ -1,0 +1,16 @@
+<footer [ngClass]="{ 'footer-test': !isProdBuild }" class="footer text-end p-2 text-gray-500 text-sm">
+  @if (versionInfo){
+    <ng-container>
+      Versión: {{ versionInfo.version }}
+      @if (isProdBuild) {
+        <ng-container>
+          ({{ versionInfo.commitHash }})
+        </ng-container>
+      } @else {
+        <ng-container>
+          ({{ versionInfo.branch }} | {{ versionInfo.commitHash }})
+        </ng-container>
+      }
+    </ng-container>
+  }
+</footer>

@@ -1,0 +1,116 @@
+//
+// GACI Theme Mode
+//
+
+$theme-gaci-colors: (
+  "primary":   #144373, // Azul GACI
+  "secondary": #e1dd00, // Amarillo GACI
+  "success":   #32aa87, // GACI Health
+  "info":      #18c0ca, // GACI Farma
+  "warning":   #f2c811, // GACI Bi
+  "danger":    #e00006, // GACI Cm
+  "purple":    #58167d, // GACI Tex
+  "dark":      #474747, // Gris corporativo oscuro
+  "light":     #ffffff  // Blanco puro
+);
+
+@if $theme-gaci == true {
+
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+
+  html[data-skin="gaci"] {
+
+    --#{$prefix}font-sans-serif:        "Montserrat", "Roboto", sans-serif;
+
+    --#{$prefix}body-bg:                #f8fafd;
+    --#{$prefix}body-font-size:         0.875rem;
+    --#{$prefix}tertiary-bg:            #f8fafd;
+    --#{$prefix}secondary-color:        #575757;
+    --#{$prefix}border-color:           #ebeef3;
+    --#{$prefix}border-radius:          .3rem;
+
+    // Tipografía
+    --#{$prefix}font-weight-medium:     500;
+    --#{$prefix}font-weight-semibold:   600;
+    --#{$prefix}font-weight-bold:       700;
+
+    // Tamaños de fuente
+    --#{$prefix}font-size-xxs: 12px;
+    --#{$prefix}font-size-xs:  13px;
+    --#{$prefix}font-size-base: 0.875rem;
+    --#{$prefix}font-size-md:  15px;
+    --#{$prefix}font-size-lg:  16px;
+    --#{$prefix}font-size-xl:  18px;
+    --#{$prefix}font-size-xxl: 20px;
+
+    // Gráficos / Charts
+    --#{$prefix}chart-primary:       #126aa7;
+    --#{$prefix}chart-secondary:     #474747;
+    --#{$prefix}chart-gray:          #aaaaaa;
+    --#{$prefix}chart-dark:          #000000;
+
+    // Sidenav
+    --#{$prefix}sidenav-item-font-weight: 500;
+    --#{$prefix}sidenav-item-font-size:   0.875rem;
+
+    @each $name, $value in $theme-gaci-colors {
+      --#{$prefix}#{$name}: #{$value};
+      --#{$prefix}#{$name}-rgb: #{to-rgb($value)};
+      --#{$prefix}#{$name}-bg-subtle: #{rgba($value, 0.15)};
+      --#{$prefix}#{$name}-border-subtle: #{rgba($value, 0.3)};
+      --#{$prefix}#{$name}-text-emphasis: #{shade-color($value, 25%)};
+    }
+
+    // Sidebars
+    &[data-sidenav-color="light"] {
+      --#{$prefix}sidenav-bg:                 #ffffff;
+      --#{$prefix}sidenav-border-color:       #ebeef3;
+      --#{$prefix}sidenav-item-color:         #575757;
+      --#{$prefix}sidenav-item-hover-color:   #126aa7;
+      --#{$prefix}sidenav-item-hover-bg:      #f8fafd;
+      --#{$prefix}sidenav-item-active-color:  #126aa7;
+      --#{$prefix}sidenav-item-active-bg:     #f8fafd;
+    }
+
+    &[data-sidenav-color="dark"] {
+      --#{$prefix}sidenav-bg:                 #1c1d28;
+      --#{$prefix}sidenav-border-color:       #1c1d28;
+      --#{$prefix}sidenav-item-color:         #aaaaaa;
+      --#{$prefix}sidenav-item-hover-color:   #ffffff;
+      --#{$prefix}sidenav-item-hover-bg:      #20222e;
+      --#{$prefix}sidenav-item-active-color:  #ffffff;
+      --#{$prefix}sidenav-item-active-bg:     #20222e;
+    }
+
+    // Topbar
+    &[data-topbar-color="light"] {
+      --#{$prefix}topbar-bg:                  #ffffff;
+      --#{$prefix}topbar-item-color:          #575757;
+      --#{$prefix}topbar-item-hover-color:    #126aa7;
+      --#{$prefix}topbar-search-bg:           transparent;
+      --#{$prefix}topbar-search-border:       #e7e9eb;
+    }
+
+    &[data-topbar-color="dark"] {
+      --#{$prefix}topbar-bg:                  #252630;
+      --#{$prefix}topbar-item-color:          #aaaaaa;
+      --#{$prefix}topbar-item-hover-color:    #ffffff;
+      --#{$prefix}topbar-search-bg:           #2d2e3c;
+      --#{$prefix}topbar-search-border:       #2d2e3c;
+    }
+  }
+
+  @if $enable-dark-mode {
+    @include color-mode(dark, true) {
+      &[data-skin="gaci"] {
+        --#{$prefix}body-bg:              #17181e;
+        --#{$prefix}tertiary-bg:          #272832;
+        --#{$prefix}border-color:         #252630;
+        --#{$prefix}secondary-bg:         #1b1c22;
+        --#{$prefix}box-shadow:           0px 0px 30px rgba(0, 0, 0, 0.3);
+        --#{$prefix}light:                #35363d;
+        --#{$prefix}dark:                 #4b4d5c;
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+<div class="topbar-item">
+  <button (click)="toggleTheme()" class="topbar-link" type="button">
+    @if (layout.theme === 'light') {
+    <ng-icon name="lucideMoon" class="fs-xxl mode-light-moon" />
+    } @if (layout.theme === 'dark') {
+    <ng-icon name="lucideSun" class="fs-xxl mode-light-sun" />
+    }
+  </button>
+</div>

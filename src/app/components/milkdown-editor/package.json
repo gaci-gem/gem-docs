@@ -1,0 +1,41 @@
+{
+  "name": "@yourorg/standalone-milkdown",
+  "version": "1.0.0",
+  "description": "Componente Angular standalone para el editor Milkdown",
+  "main": "index.ts",
+  "keywords": [
+    "angular",
+    "standalone",
+    "milkdown",
+    "editor",
+    "markdown",
+    "wysiwyg",
+    "component"
+  ],
+  "author": "Tu Nombre",
+  "license": "MIT",
+  "peerDependencies": {
+    "@angular/core": "^17.0.0",
+    "@angular/common": "^17.0.0",
+    "@angular/forms": "^17.0.0",
+    "@milkdown/crepe": "^1.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tuusuario/tu-repo.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tuusuario/tu-repo/issues"
+  },
+  "homepage": "https://github.com/tuusuario/tu-repo#readme",
+  "files": [
+    "*.ts",
+    "*.scss",
+    "*.md",
+    "index.ts"
+  ],
+  "scripts": {
+    "build": "echo 'No build step required for standalone component'",
+    "test": "echo 'No tests configured yet'"
+  }
+}

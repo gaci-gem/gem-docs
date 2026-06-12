@@ -1,0 +1,59 @@
+<div class="topbar-item nav-user">
+  <div ngbDropdown [placement]="'bottom-end'" class="dropdown">
+    <button
+      ngbDropdownToggle
+      class="topbar-link dropdown-toggle drop-arrow-none px-2"
+    >
+      <img
+        [src]="getFotoPerfil()"
+        width="32"
+        class="rounded-circle d-flex"
+        alt="user-image"
+      />
+    </button>
+    <div ngbDropdownMenu class="dropdown-menu dropdown-menu-end">
+      @for (item of menuItems; track i; let i = $index) {
+      <div>
+        @if (item.isHeader) {
+        <div class="dropdown-header noti-title">
+          <h6 class="text-overflow m-0">{{ item.label }}</h6>
+        </div>
+        } @if (item.isDivider) {
+        <div class="dropdown-divider"></div>
+        } @if (!item.isHeader && !item.isDivider) {
+          @if (item.url) {
+            @if (item.newTab) {
+              <a [href]="item.url" target="_blank" class="dropdown-item" [class]="item.class">
+                <ng-icon
+                  [name]="item.icon"
+                  size="17"
+                  class="align-middle d-inline-flex align-items-center me-2"
+                />
+                <span class="align-middle" [innerHTML]="item.label"></span>
+              </a>
+            } @else {
+              <a [routerLink]="item.url" class="dropdown-item" [class]="item.class">
+                <ng-icon
+                  [name]="item.icon"
+                  size="17"
+                  class="align-middle d-inline-flex align-items-center me-2"
+                />
+                <span class="align-middle" [innerHTML]="item.label"></span>
+              </a>
+            }
+          } @if (item.event) {
+            <a (click)="handleEvent(item.event)" class="dropdown-item" [class]="item.class">
+              <ng-icon
+                [name]="item.icon"
+                size="17"
+                class="align-middle d-inline-flex align-items-center me-2"
+              />
+              <span class="align-middle" [innerHTML]="item.label"></span>
+            </a>
+          }
+        }
+      </div>
+      }
+    </div>
+  </div>
+</div>

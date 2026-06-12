@@ -1,0 +1,35 @@
+//
+// _jvectormap.scss
+//
+
+.jvm-tooltip {
+    font-family: $font-family-base !important;
+    background-color: #223058 !important;
+    font-size: $font-size-base !important;
+    padding: 4px 10px !important;
+}
+
+.jvm-label {
+    font-family: $font-family-base !important;
+    fill: var(--#{$prefix}body-color) !important;
+    font-size: $font-size-base !important;
+}
+
+.jvm-container {
+    text.jvm-marker {
+        fill: var(--#{$prefix}body-color) !important;
+        font-family: $font-family-base !important;
+    }
+}
+
+.jvm-zoom-btn {
+    background-color: #2b2c34 !important;
+    height: 20px !important;
+    width: 20px !important;
+    text-align: center !important;
+    line-height: 12px !important;
+}
+
+.jvm-zoom-btn.jvm-zoomin {
+    top: 6px !important;
+}

@@ -1,0 +1,12 @@
+.footer {
+  transition: background-color 0.3s ease;
+  display: block;
+  padding-right: 2% !important;
+}
+
+/* Color para builds de test/develop/staging */
+.footer-test {
+  background-color: #ffcdcd; /* amarillo claro tipo aviso */
+  color: #850404;
+  border-top: 1px solid #ffbaba;
+}

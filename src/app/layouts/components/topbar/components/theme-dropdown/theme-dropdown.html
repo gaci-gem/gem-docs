@@ -1,0 +1,39 @@
+<div class="topbar-item me-2">
+  <div ngbDropdown>
+    <button
+      class="topbar-link fw-semibold drop-arrow-none"
+      ngbDropdownToggle
+      type="button"
+    >
+      <img
+        src="assets/images/themes/{{ selectedSkin }}.svg"
+        alt="user-image"
+        class="w-100 rounded me-2"
+        height="18"
+      />
+      <span class="text-nowrap"> {{ selectedSkin | titlecase}} </span>
+      <!-- <span class="dot-blink" aria-label="live status indicator"></span> -->
+    </button>
+    <div ngbDropdownMenu class="dropdown-menu-lg dropdown-menu-end p-1">
+      <ngx-simplebar class="h-100" style="max-height: 250px">
+        <div class="row g-0">
+          @for (group of [skinOptions.slice(0, 7), skinOptions.slice(7)]; track
+          i; let i = $index) {
+          <div class="col-md-6">
+            @for (skin of group; track skin.name) {
+            <button
+              class="dropdown-item position-relative"
+              [class.drop-custom-active]="skin.name === selectedSkin"
+              (click)="setSkin(skin.name)"
+            >
+              <img [src]="skin.img" alt="" class="me-1 rounded" height="18" />
+              <span class="align-middle">{{ skin.name | titlecase}}</span>
+            </button>
+            }
+          </div>
+          }
+        </div>
+      </ngx-simplebar>
+    </div>
+  </div>
+</div>
