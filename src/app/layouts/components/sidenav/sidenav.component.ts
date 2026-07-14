@@ -6,8 +6,8 @@ import { LayoutService } from '@core/services/layout.service';
   selector: 'app-sidenav',
   imports: [DocSidebarComponent],
   template: `
-    <div class="sidenav-menu">
-      <app-doc-sidebar />
+    <div class="sidenav-menu" style="height: 100%">
+      <app-doc-sidebar style="height: 100%; display: block" />
     </div>
   `,
 })

@@ -1,0 +1,37 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.tiptap-page {
+  background: transparent;
+}
+
+// -----------------------------------------------------------------------------
+// Editor Content — flows naturally inside the parent scroll surface
+// -----------------------------------------------------------------------------
+
+.editor-content {
+  width: 100%;
+
+  &.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+}
+
+// Wrapper — lets ProseMirror expand naturally
+.editor-wrap {
+  display: block;
+  width: 100%;
+}
+
+// .tiptap = the ProseMirror container
+.tiptap {
+  display: block;
+  width: 100%;
+}
+
+// All content typography styles (headings, lists, tables, etc.) moved to
+// styles.scss — they need to be global so Tiptap's dynamically-created DOM
+// elements inherit them (Angular view encapsulation blocks scoped styles).

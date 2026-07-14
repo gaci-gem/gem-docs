@@ -1,0 +1,52 @@
+.docs-list-page {
+  // Sin background explícito: hereda de .content-page para que dark mode
+  // funcione correctamente. La CSS variable --tt-surface-ground del theme
+  // Tabler no se redefine en [data-bs-theme="dark"], así que ponerla
+  // acá hardcodeada rompía el contraste cuando el usuario activaba dark mode.
+  // No min-height: the global footer sits below this component inside
+  // `.content-page` (see vertical-layout.html). Forcing a min-height here
+  // pushes the footer off-viewport and triggers an unwanted vertical scroll.
+}
+
+// Toolbar (breadcrumb + action buttons): top strip below the topbar.
+// Background flips with the global theme via explicit dark-mode selectors
+// — relying on --bs-card-bg alone didn't reliably work in this project's
+// Bootstrap/ng-icons setup, so we set both light and dark rules.
+.docs-toolbar {
+  height: 50px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+
+  :host-context(html[data-bs-theme="dark"]) & {
+    background-color: var(--bs-secondary-bg, #1a1d23);
+    border-bottom-color: var(--bs-border-color, #2a2d33);
+  }
+}
+
+.max-width-container {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+// Card de la tabla — fondo se adapta a dark mode
+.table-card {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-radius: 0.5rem;
+  overflow: hidden;
+
+  :host-context(html[data-bs-theme="dark"]) & {
+    background-color: var(--bs-secondary-bg, #1a1d23);
+    border-color: var(--bs-border-color, #2a2d33);
+  }
+}
+
+// Reset del breadcrumb para que herede el fondo de la toolbar.
+:host ::ng-deep .p-breadcrumb {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}

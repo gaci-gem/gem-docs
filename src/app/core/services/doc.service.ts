@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 import { environment } from '@/environments/environment';
 import { Doc, DocCreate, DocUpdate, DocWithContent } from '@core/interfaces/doc';
 import { DocLink } from '@core/interfaces/doc-link';
@@ -10,8 +10,17 @@ export class DocService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.API_URL}/docs`;
 
-  list(): Observable<Doc[]> {
-    return this.http.get<Doc[]>(this.apiUrl);
+  /** Emits after any create/update so the sidebar (and other consumers) can refresh */
+  changes$ = new Subject<void>();
+
+  /** Convenience: emit a change notification */
+  notifyChanges(): void {
+    this.changes$.next();
+  }
+
+  list(options?: { silent?: boolean }): Observable<Doc[]> {
+    const headers = options?.silent ? { 'X-No-Loading': 'true' } : undefined;
+    return this.http.get<Doc[]>(this.apiUrl, { headers });
   }
 
   getById(id: string): Observable<DocWithContent> {
@@ -27,12 +36,14 @@ export class DocService {
     return this.http.get<Doc[]>(`${this.apiUrl}/evento/${eventoId}`);
   }
 
-  create(doc: DocCreate): Observable<DocWithContent> {
-    return this.http.post<DocWithContent>(this.apiUrl, doc);
+  create(doc: DocCreate, options?: { silent?: boolean }): Observable<DocWithContent> {
+    const headers = options?.silent ? { 'X-No-Loading': 'true' } : undefined;
+    return this.http.post<DocWithContent>(this.apiUrl, doc, { headers });
   }
 
-  update(id: string, doc: DocUpdate): Observable<DocWithContent> {
-    return this.http.put<DocWithContent>(`${this.apiUrl}/${id}`, doc);
+  update(id: string, doc: DocUpdate, options?: { silent?: boolean }): Observable<DocWithContent> {
+    const headers = options?.silent ? { 'X-No-Loading': 'true' } : undefined;
+    return this.http.put<DocWithContent>(`${this.apiUrl}/${id}`, doc, { headers });
   }
 
   delete(id: string): Observable<void> {

@@ -5,197 +5,440 @@
 
 @use "./assets/scss/app.scss";
 
-// Crepe Editor styles
-@import "@milkdown/crepe/theme/common/style.css";
-// @import "@milkdown/crepe/theme/frame.css";
+// =============================================================================
+// Tiptap Editor — Global CSS Variables
+// Matches tiptap simple template: https://template.tiptap.dev/preview/templates/simple
+// =============================================================================
 
-// var(--ins-card-bg)
+// NOTE: Crepe/Milkdown styles are preserved below (lines ~890+) for reference.
+// Tiptap is now the active editor.
+// To revert to Milkdown, remove this section and restore Crepe import.
+
+// -----------------------------------------------------------------------------
+// CSS Variables — LIGHT MODE (default)
+// -----------------------------------------------------------------------------
+
 :root {
-  /* Asegura que exista --ins-card-bg; usa --ins-secondary-bg si no está definida por el tema */
-  --ins-card-bg: var(--ins-card-bg, var(--ins-secondary-bg));
-  --p-toolbar-background: var(--ins-card-bg);
-  --p-datatable-header-background: var(--ins-card-bg);
-  --p-paginator-background: var(--ins-card-bg);
+  // Tiptap simple template vars
+  --tt-toolbar-bg: #ffffff;
+  --tt-toolbar-border: #e5e7eb;
+  --tt-text: #111827;
+  --tt-text-secondary: #374151;
+  --tt-text-muted: #9ca3af;
+  --tt-primary: #144373;
+  --tt-surface: #f8fafd;
+  --tt-surface-low: #f3f4f6;
+  --tt-page-bg: #ffffff;
+  --tt-border: #e5e7eb;
 
-  --p-datatable-header-cell-background: var(--ins-card-bg);
-  --p-datatable-row-background: var(--ins-card-bg);
+  // Button states
+  --tt-btn-default-bg: transparent;
+  --tt-btn-default-text: #374151;
+  --tt-btn-default-icon: #6b7280;
+  --tt-btn-hover-bg: #f3f4f6;
+  --tt-btn-hover-text: #111827;
+  --tt-btn-hover-icon: #374151;
+  --tt-btn-active-bg: #e5e7eb;
+  --tt-btn-active-text: #144373;
+  --tt-btn-active-icon: #144373;
 
-  --p-inputtext-background: var(--ins-secondary-bg);
-  --p-inputtext-hover-background: var(--ins-secondary-bg);
-  --p-inputtext-focus-background: var(--ins-secondary-bg);
-  --p-inputtext-filled-background: var(--ins-secondary-bg);
-  --p-inputtext-filled-hover-background: var(--ins-secondary-bg);
-  --p-inputtext-filled-focus-background: var(--ins-secondary-bg);
+  // Backward compat — old tiptap-* vars
+  --tiptap-primary: #144373;
+  --tiptap-border: #e2e8f0;
+  --tiptap-bg: #ffffff;
+  --tiptap-text: #111827;
+  --tiptap-text-muted: #9ca3af;
 }
 
-.p-datepicker {
-  .p-inputtext {
-    width: 100%;
-    background: var(--ins-secondary-bg) !important;
+// -----------------------------------------------------------------------------
+// CSS Variables — DARK MODE
+// -----------------------------------------------------------------------------
+
+.dark,
+[data-bs-theme="dark"] {
+  --tt-toolbar-bg: #0f0f11;
+  --tt-toolbar-border: rgba(255, 255, 255, 0.08);
+  --tt-text: #f4f4f5;
+  --tt-text-secondary: #a1a1aa;
+  --tt-text-muted: #71717a;
+  --tt-primary: #3b82f6;
+  --tt-surface: #18181b;
+  --tt-surface-low: #27272a;
+  --tt-page-bg: #1c1c22;
+  --tt-border: rgba(255, 255, 255, 0.08);
+
+  --tt-btn-default-bg: transparent;
+  --tt-btn-default-text: #a1a1aa;
+  --tt-btn-default-icon: #71717a;
+  --tt-btn-hover-bg: rgba(255, 255, 255, 0.06);
+  --tt-btn-hover-text: #f4f4f5;
+  --tt-btn-hover-icon: #a1a1aa;
+  --tt-btn-active-bg: rgba(59, 130, 246, 0.15);
+  --tt-btn-active-text: #3b82f6;
+  --tt-btn-active-icon: #3b82f6;
+
+  --tiptap-primary: #3b82f6;
+  --tiptap-border: #374151;
+  --tiptap-bg: #1a1d27;
+  --tiptap-text: #f1f5f9;
+  --tiptap-text-muted: #94a3b8;
+}
+
+// -----------------------------------------------------------------------------
+// When editing a doc, hide the layout footer — it creates extra scroll
+// -----------------------------------------------------------------------------
+
+body.editing-doc {
+  overflow: hidden;
+
+  app-footer {
+    display: none !important;
   }
 }
 
-.p-inputtext.p-variant-filled {
-  background: var(--ins-secondary-bg) !important;
+[data-theme="dark"] {
+  --tt-toolbar-bg: #0f0f11;
+  --tt-toolbar-border: rgba(255, 255, 255, 0.08);
+  --tt-text: #f4f4f5;
+  --tt-text-secondary: #a1a1aa;
+  --tt-text-muted: #71717a;
+  --tt-primary: #3b82f6;
+  --tt-surface: #18181b;
+  --tt-surface-low: #27272a;
+  --tt-page-bg: #1c1c22;
+  --tt-border: rgba(255, 255, 255, 0.08);
 }
 
-// Forzar que el slash-menu y otros popovers se rendericen en z-index alto
-.milkdown-slash-menu,
-.milkdown .milkdown-slash-menu,
+// -----------------------------------------------------------------------------
+// ProseMirror base — used by Tiptap globally
+// These MUST be global (not scoped) because Tiptap creates DOM elements
+// dynamically, which bypasses Angular's view encapsulation.
+// -----------------------------------------------------------------------------
+
+.ProseMirror {
+  font-family: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--tt-text);
+  caret-color: var(--tt-primary);
+  outline: none;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  white-space: break-spaces;
+  -webkit-font-variant-ligatures: none;
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0;
+
+  &::selection, *::selection {
+    background: rgba(20, 67, 115, 0.15) !important;
+  }
+
+  p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    color: var(--tt-text-muted);
+    pointer-events: none;
+    height: 0;
+  }
+
+  &:focus { outline: none; }
+
+  // ── Headings ────────────────────────────────────────────────────
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    border-bottom: 2px solid var(--tt-border);
+    padding-bottom: 0.5rem;
+    margin: 1.5rem 0 1rem;
+    &:first-child { margin-top: 0; }
+  }
+  h2 { font-size: 1.5rem; font-weight: 600; margin: 1.25rem 0 0.75rem; }
+  h3 { font-size: 1.25rem; font-weight: 600; margin: 1rem 0 0.5rem; }
+  h4 { font-size: 1.125rem; font-weight: 600; margin: 0.875rem 0 0.5rem; }
+  h5 { font-size: 1rem; font-weight: 600; margin: 0.75rem 0 0.5rem; }
+  h6 { font-size: 0.875rem; font-weight: 600; color: var(--tt-text-muted); margin: 0.75rem 0 0.5rem; }
+
+  // ── Paragraphs ───────────────────────────────────────────────────
+  p { margin: 0.75rem 0; &:first-child { margin-top: 0; } &:last-child { margin-bottom: 0; } }
+
+  // ── Links ────────────────────────────────────────────────────────
+  a {
+    color: var(--tt-primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    &:hover { text-decoration-color: var(--tt-primary); }
+  }
+
+  // ── Lists ────────────────────────────────────────────────────────
+  ul, ol { padding-left: 1.75rem; margin: 0.75rem 0; }
+  li { margin: 0.35rem 0; line-height: 1.7; > p { margin: 0; } }
+
+  // ── Task list ─────────────────────────────────────────────────────
+  ul[data-type="taskList"] {
+    list-style: none;
+    padding-left: 0;
+    li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      label { display: flex; align-items: center; margin-top: 0.2rem; flex-shrink: 0; }
+      input[type="checkbox"] { accent-color: var(--tt-primary); cursor: pointer; width: 15px; height: 15px; }
+      > div[data-type="paragraph"] { flex: 1; }
+    }
+  }
+
+  // ── Blockquote ────────────────────────────────────────────────────
+  blockquote {
+    margin: 1rem 0;
+    padding: 0.875rem 1.25rem;
+    border-left: 4px solid var(--tt-primary);
+    background: var(--tt-surface);
+    border-radius: 0 0.5rem 0.5rem 0;
+    p { margin: 0; }
+  }
+
+  // ── Inline code ──────────────────────────────────────────────────
+  code {
+    padding: 0.15rem 0.4rem;
+    background: var(--tt-surface-low);
+    border: 1px solid var(--tt-border);
+    border-radius: 0.25rem;
+    font-size: 0.875em;
+    font-family: 'Fira Code', 'Cascadia Code', monospace;
+    color: #c0392b;
+  }
+
+  // ── Code block ─────────────────────────────────────────────────────
+  pre {
+    margin: 1rem 0;
+    padding: 1rem 1.25rem;
+    background: #1f2937;
+    border-radius: 0.75rem;
+    overflow-x: auto;
+    code { background: none; border: none; padding: 0; color: #e2e8f0; font-size: 0.875rem; }
+  }
+
+  // ── Tables ─────────────────────────────────────────────────────────
+  table {
+    width: 100%;
+    margin: 1rem 0;
+    border-collapse: collapse;
+    border: 1px solid var(--tt-border);
+    border-radius: 0.75rem;
+    overflow: hidden;
+  }
+  th, td { padding: 0.625rem 0.875rem; border: 1px solid var(--tt-border); text-align: left; vertical-align: top; }
+  th { background: var(--tt-surface); font-weight: 600; font-size: 0.875rem; }
+  tr:hover td { background: var(--tt-surface-low); }
+  .selectedCell::after { content: ''; position: absolute; inset: 0; background: rgba(20, 67, 115, 0.08); pointer-events: none; }
+
+  // ── Images ──────────────────────────────────────────────────────
+  img { max-width: 100%; height: auto; border-radius: 0.5rem; margin: 1rem 0; }
+
+  // ── HR ──────────────────────────────────────────────────────────
+  hr { margin: 1.5rem 0; border: none; border-top: 1px solid var(--tt-border); }
+
+  // ── Typography helpers ──────────────────────────────────────────
+  strong { font-weight: 600; }
+  em { font-style: italic; }
+  s, del { text-decoration: line-through; color: var(--tt-text-secondary); }
+}
+
+// Gapcursor
+.ProseMirror-gapcursor::after {
+  border-top: 1px solid var(--tiptap-primary);
+}
+
+// -----------------------------------------------------------------------------
+// 4. Bubble Menu (floating toolbar on selection)
+// -----------------------------------------------------------------------------
+
+.tiptap-bubble-menu,
+[data-bubble-menu],
+.bubble-menu {
+  background: var(--tiptap-bg) !important;
+  border: 1px solid var(--tiptap-border) !important;
+  border-radius: var(--tiptap-radius) !important;
+  box-shadow: var(--tiptap-shadow-lg) !important;
+  padding: 0.25rem !important;
+  display: flex !important;
+  gap: 0.125rem !important;
+  z-index: 9999 !important;
+
+  button,
+  .bubble-btn,
+  [role="button"] {
+    padding: 0.3rem 0.5rem;
+    border-radius: 5px;
+    border: none;
+    background: transparent;
+    color: var(--tiptap-text-secondary);
+    cursor: pointer;
+    font-size: 0.8125rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.1s ease;
+    min-width: 28px;
+    height: 28px;
+
+    svg, ng-icon, .icon {
+      width: 15px;
+      height: 15px;
+    }
+
+    &:hover {
+      background: var(--tiptap-bg-low);
+      color: var(--tiptap-primary);
+    }
+
+    &.active,
+    &[data-active="true"] {
+      background: var(--tiptap-bg-secondary);
+      color: var(--tiptap-primary);
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// 5. Tiptap Suggestion / Slash Menu
+// -----------------------------------------------------------------------------
+
+.tiptap-slash-menu,
+.tiptap-menu,
+[data-slash-menu] {
+  background: var(--tiptap-bg) !important;
+  border: 1px solid var(--tiptap-border) !important;
+  border-radius: var(--tiptap-radius) !important;
+  box-shadow: var(--tiptap-shadow-lg) !important;
+  padding: 0.5rem !important;
+  min-width: 280px !important;
+  max-width: 360px !important;
+  z-index: 9999 !important;
+  font-family: "Montserrat", sans-serif;
+
+  .tiptap-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.625rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.1s ease;
+    color: var(--tiptap-text-secondary);
+
+    &:hover,
+    &[data-selected="true"] {
+      background: var(--tiptap-bg-low);
+    }
+
+    .item-icon {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--tiptap-text-muted);
+    }
+
+    .item-text {
+      flex: 1;
+      min-width: 0;
+
+      .item-name {
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--tiptap-text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .item-desc {
+        font-size: 0.7rem;
+        color: var(--tiptap-text-muted);
+        margin-top: 0.1rem;
+      }
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// 6. Table resize handle
+// -----------------------------------------------------------------------------
+
+.ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--tiptap-primary);
+  opacity: 0;
+  cursor: col-resize;
+  transition: opacity 0.15s ease;
+  &:hover { opacity: 0.5; }
+}
+
+// -----------------------------------------------------------------------------
+// 7. Global z-index overrides for Tiptap menus
+// -----------------------------------------------------------------------------
+
+.tiptap-bubble-menu,
+.tiptap-slash-menu,
+.tiptap-menu,
+[data-bubble-menu],
 [data-tippy-root],
 .tippy-box {
   z-index: 9999 !important;
   position: fixed !important;
 }
 
-// Estilos para el slash-menu con soporte para temas light/dark
-.milkdown-slash-menu {
-  background-color: var(--ins-secondary-bg) !important;
-  border: 1px solid var(--ins-border-color) !important;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
-  border-radius: 0.5rem !important;
-  
-  // Items del menú
-  .menu-item,
-  li {
-    color: var(--ins-body-color) !important;
-    
-    &:hover {
-      background-color: var(--ins-tertiary-bg) !important;
-    }
-    
-    &.selected,
-    &[data-selected="true"] {
-      background-color: var(--ins-primary-bg-subtle) !important;
-    }
-  }
-  
-  // Títulos de grupo
-  h6,
-  .menu-group-title {
-    color: var(--ins-secondary-color) !important;
-  }
-}
+// -----------------------------------------------------------------------------
+// 8. Dark mode — Bubble menu & slash menu
+// -----------------------------------------------------------------------------
 
-// Tema oscuro específico
 [data-bs-theme="dark"] {
-  .milkdown-slash-menu {
-    background-color: #1e1f27 !important;
-    border-color: #293036 !important;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2) !important;
-  }
-  
-  // Iconos del editor en tema oscuro
-  .milkdown {
-    // Iconos de la toolbar y menús
-    svg,
-    .icon,
-    [class*="icon-"] {
-      color: #aab8c5 !important;
-      fill: #aab8c5 !important;
-      stroke: #aab8c5 !important;
+  .tiptap-bubble-menu,
+  .tiptap-slash-menu,
+  .tiptap-menu,
+  [data-bubble-menu] {
+    background: #222530 !important;
+    border-color: #374151 !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+
+    button, .bubble-btn, [role="button"] {
+      color: #e2e8f0;
+      &:hover { background: #2a2d3a; color: #3b82f6; }
+      &.active { background: #374151; color: #3b82f6; }
     }
-    
-    // Botones y controles
-    button,
-    .button,
-    [role="button"] {
-      color: #aab8c5 !important;
-      
-      svg {
-        color: #aab8c5 !important;
-        fill: #aab8c5 !important;
-        stroke: #aab8c5 !important;
-      }
-      
-      &:hover {
-        color: #ffffff !important;
-        
-        svg {
-          color: #ffffff !important;
-          fill: #ffffff !important;
-          stroke: #ffffff !important;
-        }
-      }
-    }
-    
-    // Slash menu icons
-    .milkdown-slash-menu {
-      svg,
-      .icon {
-        color: #aab8c5 !important;
-        fill: #aab8c5 !important;
-      }
-    }
-    
-    // Tooltips y popovers
-    .tippy-box,
-    [data-tippy-root] {
-      svg {
-        color: #aab8c5 !important;
-        fill: #aab8c5 !important;
-      }
+
+    .tiptap-menu-item {
+      color: #94a3b8;
+      &:hover, &[data-selected="true"] { background: #2a2d3a; }
+      .item-text .item-name { color: #f1f5f9; }
+      .item-text .item-desc { color: #6b7280; }
+      .item-icon { color: #6b7280; }
     }
   }
-}
 
-.milkdown {
-  min-height: inherit;
-}
-.milkdown .milkdown-slash-menu .tab-group {
-  padding: 0px !important;
-  ul {
-    margin: 0 !important;
-    li {
-      margin: 0 !important;
+  // Selection in dark mode
+  .ProseMirror {
+    &::selection, *::selection {
+      background: rgba(59, 130, 246, 0.3) !important;
+    }
+
+    code {
+      background: var(--tt-surface-low);
+      color: #f87171;
     }
   }
-}
-.milkdown .milkdown-slash-menu .menu-groups .menu-group {
-  h6 {
-    margin: 0 !important;
-    padding: 7px 5px !important;
+
+  // Code blocks in dark
+  .ProseMirror pre {
+    background: #111827 !important;
+    code { color: #e2e8f0 !important; background: none !important; }
   }
-  ul {
-    margin: 0 !important;
-    li {
-      margin: 0 !important;
-      padding: 7px 5px !important;
-    }
-  }
-}
-.milkdown .ProseMirror {
-  padding: 10px 50px !important;
-}
-
-
-.p-multiselect {
-  width: 100%;
-}
-.p-contextmenu {
-  position: fixed !important;
-}
-
-.choices__list--dropdown {
-  z-index: 1055 !important; /* Asegura que esté por encima de la mayoría de los modales (z-index 1050) */
-}
-
-.titulo_dropdown {
-  margin: 2px 10px;
-  font-size: 12px;
-  color: lightgray;
-  font-weight: 500;
-}
-
-.dropzone .dropzone.dz-wrapper .dz-message,
-.dropzone .dropzone.dz-wrapper .dz-message .dz-message {
-  padding: 0 !important;
-  height: inherit !important;
-}
-dropzone>.dropzone.dz-wrapper .dz-message .dz-text {
-  transform: translateY(-69%) !important;
-}
-.dropzone {
-  min-height: inherit !important;
 }
 

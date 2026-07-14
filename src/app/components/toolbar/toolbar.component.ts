@@ -89,7 +89,7 @@ import { ToolbarService } from './toolbar.service';
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>
           </button>
           <button class="toolbar-btn" title="Align center" [class.toolbar-btn-active]="toolbarService.isActive('textAlign', { align: 'center' })" (click)="toolbarService.execCmd('textAlign', 'center')" type="button">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
           </button>
           <button class="toolbar-btn" title="Align right" [class.toolbar-btn-active]="toolbarService.isActive('textAlign', { align: 'right' })" (click)="toolbarService.execCmd('textAlign', 'right')" type="button">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/></svg>
@@ -109,39 +109,8 @@ import { ToolbarService } from './toolbar.service';
         </div>
       </div>
 
-      <!-- Save status + button — right side -->
+      <!-- Save status + dropdown more options button — right side -->
       <div class="toolbar-right">
-        <!-- Archivo menu — groups Import + Export actions into one trigger.
-             The PrimeNG popup is appended to <body> so it escapes the
-             toolbar's overflow:auto and renders above any clip context. -->
-        <button
-          class="btn-import btn-menu-trigger"
-          title="Importar / Exportar"
-          (click)="menu.toggle($event)"
-          type="button"
-          aria-haspopup="true"
-          [attr.aria-expanded]="false">
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          <span>Archivo</span>
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="chevron"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <p-menu #menu [model]="items" [popup]="true" appendTo="body" />
-
-        <!-- View metadata button — opens the read-only metadata dialog.
-             Placed between Archivo menu and Save so it sits with other
-             document-level actions. Disabled when no editor is mounted
-             (consistent with the toolbar's overall disabled state). -->
-        <button
-          class="btn-metadata"
-          title="Ver metadata del documento"
-          (click)="viewMetadata.emit()"
-          type="button"
-          [attr.aria-label]="'Ver metadata del documento'"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29a1 1 0 0 0 1.42 0l8.58-8.58a1 1 0 0 0 0-1.42L12 2z"/><polyline points="7 7 7 13 13 13"/></svg>
-          <span>Metadata</span>
-        </button>
-
         <!-- Save button -->
         <button
           class="btn-save"
@@ -151,6 +120,18 @@ import { ToolbarService } from './toolbar.service';
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
           <span>Guardar</span>
         </button>
+
+        <!-- Notion style "..." menu trigger for additional actions (Metadata, Import, Export) -->
+        <button
+          class="btn-more"
+          title="Más opciones"
+          (click)="menu.toggle($event)"
+          type="button"
+          aria-haspopup="true"
+          [attr.aria-expanded]="false">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-more-horizontal"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+        </button>
+        <p-menu #menu [model]="items" [popup]="true" appendTo="body" />
 
         <!-- Status indicator — always rendered so the 24px slot is reserved
              to the RIGHT of the Save button. Showing/hiding the SVG inside
@@ -164,6 +145,7 @@ import { ToolbarService } from './toolbar.service';
     </div>
   `,
   styleUrl: './toolbar.component.scss',
+  viewProviders: [],
 })
 export class ToolbarComponent {
   // Signal-based outputs (AGENTS.md: prefer output() over @Output decorator).
@@ -176,12 +158,16 @@ export class ToolbarComponent {
   protected toolbarService = inject(ToolbarService);
 
   /**
-   * Items rendered inside the "Archivo" popup. Imported + exported in one
-   * place so the same labels/icons drive both the toolbar trigger label
-   * and the menu. `command` re-emits the corresponding output so the parent
-   * (DocEditorComponent) handles each action identically to before.
+   * Notion-style popup menu items. Groups Ver Metadata, Import, and Export actions.
+   * re-emits the corresponding output so the parent (DocEditorComponent) handles each action.
    */
   protected readonly items: MenuItem[] = [
+    {
+      label: 'Ver metadata',
+      icon: 'pi pi-tag',
+      command: () => this.viewMetadata.emit(),
+    },
+    { separator: true },
     {
       label: 'Importar .docx',
       icon: 'pi pi-upload',

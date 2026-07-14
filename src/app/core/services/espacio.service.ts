@@ -9,8 +9,9 @@ export class EspacioService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.API_URL}/espacios`;
 
-  list(): Observable<Espacio[]> {
-    return this.http.get<Espacio[]>(this.apiUrl);
+  list(options?: { silent?: boolean }): Observable<Espacio[]> {
+    const headers = options?.silent ? { 'X-No-Loading': 'true' } : undefined;
+    return this.http.get<Espacio[]>(this.apiUrl, { headers });
   }
 
   getById(id: string): Observable<Espacio> {

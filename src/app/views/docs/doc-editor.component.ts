@@ -15,6 +15,27 @@ import { MetadataDialogComponent } from './components/metadata-dialog/metadata-d
 import { ImageLightboxComponent } from '../../components/image-lightbox/image-lightbox.component';
 import { Espacio } from '@core/interfaces/espacio';
 import { DocMetadata } from '@core/interfaces/doc-metadata';
+
+/**
+ * Fallback metadata for a doc that the backend hasn't populated yet (no
+ * evento link yet). Renders as 9 em-dash rows in the modal — better UX
+ * than the previous `null` branch which showed an "empty state" message
+ * that no longer exists after the R17 fix.
+ *
+ * Kept in lockstep with the backend's `DocsMetadata` shape; the spec suite
+ * in `metadata-dialog.component.spec.ts` covers the contract.
+ */
+const EMPTY_METADATA: DocMetadata = {
+  cliente: null,
+  producto: null,
+  modulo: null,
+  proyecto: null,
+  etapaActual: null,
+  usuarioActual: null,
+  eventoCode: null,
+  titulo: null,
+  eventoId: null,
+};
 import { MenuItem } from 'primeng/api';
 import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription, debounceTime, Subject } from 'rxjs';
@@ -70,11 +91,12 @@ import { showError, showInfo } from '../../utils/message-utils';
 
     <!-- Metadata dialog — read-only view of Doc.metadata. Guarded by
          currentDoc() — we never open it before a doc has loaded, so the
-         dialog always shows real data or the "no evento link" empty state. -->
+         dialog always shows real data or the 9 em-dash rows for an empty
+         payload (R17 fix: null fields render as em-dash, not skipped). -->
     <app-metadata-dialog
       [visible]="showMetadataDialog()"
       [metadata]="currentMetadata()"
-      (closed)="closeMetadataDialog()"
+      (visibleChange)="showMetadataDialog.set($event)"
     />
 
     <!-- Image lightbox overlay (opens when user clicks an image in the editor) -->
@@ -107,9 +129,9 @@ export class DocEditorComponent {
   showImportDialog = signal(false);
   showMetadataDialog = signal(false);
   /** Loaded doc payload (null while loading or when creating a new doc). */
-  currentDoc = signal<{ id: string; metadata?: DocMetadata | null } | null>(null);
+  currentDoc = signal<{ id: string; metadata: DocMetadata } | null>(null);
   /** Convenience computed — feeds the metadata dialog input. */
-  currentMetadata = computed(() => this.currentDoc()?.metadata ?? null);
+  currentMetadata = computed(() => this.currentDoc()?.metadata ?? EMPTY_METADATA);
   newSpaceName = '';
   autor = toSignal(this.authService.currentUser$, { initialValue: null });
   espacioNombre = signal('');
@@ -177,8 +199,10 @@ export class DocEditorComponent {
         this.espacioId = doc.espacioId;
         // Store the loaded doc so the metadata dialog can read its payload
         // without re-hitting the backend. Updates here cover the caso of a
-        // brand-new doc just created via POST.
-        this.currentDoc.set({ id: doc.id, metadata: doc.metadata ?? null });
+        // brand-new doc just created via POST. metadata is required on Doc
+        // (spec R15); backend always returns it (default `{}`), so we trust
+        // the payload directly.
+        this.currentDoc.set({ id: doc.id, metadata: doc.metadata });
         this.loadEspacioNombre(doc.espacioId);
         this.parseLinks(doc.content);
       },
@@ -310,12 +334,12 @@ export class DocEditorComponent {
           this.docId = result.id;
           // Track the new doc so the metadata dialog has something to show
           // (it'll be empty until an evento links to it).
-          this.currentDoc.set({ id: result.id, metadata: result.metadata ?? null });
+          this.currentDoc.set({ id: result.id, metadata: result.metadata });
           this.router.navigate(['/docs', this.docId]);
         } else if (result?.id) {
           // Existing doc — refresh metadata so any server-side update is
           // reflected the next time the user opens the dialog.
-          this.currentDoc.set({ id: result.id, metadata: result.metadata ?? null });
+          this.currentDoc.set({ id: result.id, metadata: result.metadata });
         }
         // Notify sidebar to refresh
         this.docService.notifyChanges();
@@ -367,17 +391,13 @@ export class DocEditorComponent {
    * Open the metadata dialog (triggered from the toolbar).
    *
    * Guard: we only open when a doc is currently loaded. In "new doc" mode
-   * there's no metadata to show — opening would just flash the empty state,
+   * there's no metadata to show — opening would just flash 9 em-dash rows,
    * which is information the user already has (no doc loaded yet).
    * The toolbar's disabled state covers the "no editor" case.
    */
   openMetadataDialog(): void {
     if (this.currentDoc() === null) return;
     this.showMetadataDialog.set(true);
-  }
-
-  closeMetadataDialog(): void {
-    this.showMetadataDialog.set(false);
   }
 
   /**

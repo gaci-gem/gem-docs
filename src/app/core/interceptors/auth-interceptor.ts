@@ -11,7 +11,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const token = authService.getAccessToken();
 
   const redirectToGemWebLogin = () => {
-    window.location.href = `${environment.GEM_WEB_URL}/login`;
+    // Preserve current gem-docs URL as returnUrl so user comes back here after login
+    const returnUrl = encodeURIComponent(window.location.href);
+    window.location.href = `${environment.GEM_WEB_URL}/login?returnUrl=${returnUrl}`;
   };
 
   if (req.headers.get('X-Refresh-Attempt')) {

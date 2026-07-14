@@ -15,12 +15,13 @@ export interface Doc {
   createdAt: Date;
   updatedAt: Date;
   /**
-   * Optional evento-linked metadata. The backend populates this when the doc
-   * is associated with an `evento_documentacion` and emits `ACTUALIZADO`
-   * whenever the linked evento changes. Optional because newly-created docs
-   * may not yet have any evento link.
+   * Evento-linked metadata. The backend ALWAYS returns `metadata` on the doc
+   * payload — populated from the linked `evento` via `buildMetadataFromEvento`
+   * when an `evento_documentacion` link exists, or `{}` when no evento is
+   * linked yet. The schema column is `metadata Json @default("{}")`, so this
+   * is required (not optional) per spec R15.
    */
-  metadata?: DocMetadata | null;
+  metadata: DocMetadata;
 }
 
 export type DocCreate = Pick<Doc, 'titulo' | 'espacioId'> & {

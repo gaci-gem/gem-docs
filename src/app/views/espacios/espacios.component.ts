@@ -93,7 +93,7 @@ import { Espacio } from '@core/interfaces/espacio';
                 <div class="card-footer bg-transparent">
                   <a 
                     [routerLink]="['/docs']" 
-                    [queryParams]="{espacio: espacio.id}"
+                    [queryParams]="{espacioId: espacio.id}"
                     class="btn btn-sm btn-ghost-secondary">
                     Ver documentos
                   </a>
@@ -129,7 +129,12 @@ export class EspaciosComponent implements OnInit {
 
   load(): void {
     this.espacioService.list().subscribe({
-      next: (espacios) => { this.espacios.set(espacios); this.loading.set(false); },
+      // Only show root-level spaces here. Sub-spaces are reachable by clicking
+      // into the parent space's grid in DocsListComponent.
+      next: (espacios) => {
+        this.espacios.set(espacios.filter((e) => !e.parentId));
+        this.loading.set(false);
+      },
       error: () => { this.loading.set(false); this.errorMsg.set('No se pudieron cargar los espacios'); }
     });
   }

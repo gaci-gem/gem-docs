@@ -1,7 +1,17 @@
 .footer {
-  transition: background-color 0.3s ease;
   display: block;
+  position: relative;
+  z-index: 1100; // encima del sidenav (z-index: 1000) por si acaso
   padding-right: 2% !important;
+  // Override del margin-right: -50px que aplica _footer.scss en xxl (≥1400px).
+  // Sin este override, el footer se extiende 50px fuera del viewport en pantallas
+  // grandes y body { overflow-x: hidden } recorta el texto del lado derecho.
+  margin-right: 0 !important;
+  margin-left: auto;
+  // Sin `transition`: estaba provocando una animación lenta al cambiar de theme
+  // (0.3s ease en background-color) que se notaba porque el resto de la UI
+  // cambiaba instantáneamente. Sacarla hace que el footer cambie al ritmo
+  // del resto de la página cuando el usuario cambia entre light/dark.
 }
 
 /* Color para builds de test/develop/staging */
