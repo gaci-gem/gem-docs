@@ -67,6 +67,27 @@ export class AuthService {
     this.clearTokens();
   }
 
+  /**
+   * Slice 3 (shared-auth-cross-origin) — broadcast hydration. Called by
+   * `AuthBoot.run()` on a 200 response from `GET /auth/profile`. Pushes the
+   * freshly decoded user into the BehaviorSubject so any subscribers (e.g.,
+   * the topbar) re-render with the correct name/avatar.
+   */
+  hydrateUser(usuario: Usuario): void {
+    this.currentUserSubject.next(usuario);
+  }
+
+  /**
+   * Slice 3 (shared-auth-cross-origin) — remote logout hook. Called by
+   * `AuthLogoutListener.onRemoteLogout()` after a `gem-auth` BroadcastChannel
+   * message is received from gem-web. The cookie is already cleared
+   * server-side (it was gem-web's POST), so we only reset the in-memory
+   * user subject; LS clear happens upstream in the listener.
+   */
+  notifyRemoteLogout(): void {
+    this.currentUserSubject.next(null);
+  }
+
   getCurrentUser(): Observable<Usuario | null> {
     return this.currentUserSubject.asObservable();
   }
