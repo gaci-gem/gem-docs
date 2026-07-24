@@ -37,6 +37,7 @@ import TurndownService from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
 import { ToolbarService } from '../toolbar/toolbar.service';
 import { ImageLightboxService } from '@core/services/image-lightbox.service';
+import { environment } from '@/environments/environment';
 
 export interface TiptapConfig {
   placeholder?: string;
@@ -322,15 +323,19 @@ export class EditorComponent implements ControlValueAccessor {
    */
   private loadContent(content: string): void {
     if (!this.editor) return;
-    if (this.looksLikeHtml(content)) {
-      this.editor.commands.setContent(content);
+
+    // Replace hardcoded dev URLs with the real API URL so images render in production
+    const normalized = content.replace(/http:\/\/localhost:4000/g, environment.API_URL);
+
+    if (this.looksLikeHtml(normalized)) {
+      this.editor.commands.setContent(normalized);
       return;
     }
 
     const mdStorage = this.editor.storage as { markdown?: { setMarkdown?: (md: string) => void } };
     if (mdStorage.markdown?.setMarkdown) {
       try {
-        mdStorage.markdown.setMarkdown(content);
+        mdStorage.markdown.setMarkdown(normalized);
         return;
       } catch (err) {
         console.error('[editor] setMarkdown failed, falling back to setContent:', err);
@@ -338,7 +343,7 @@ export class EditorComponent implements ControlValueAccessor {
     }
 
     // Fallback: if tiptap-markdown isn't loaded or threw, treat as plain HTML
-    this.editor.commands.setContent(content);
+    this.editor.commands.setContent(normalized);
   }
 
   /** Synchronous version used during initial editor creation (extension storage not ready) */

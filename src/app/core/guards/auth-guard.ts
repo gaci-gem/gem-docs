@@ -27,10 +27,18 @@ function extractAndSaveTokenFromUrl(): boolean {
 
 export const authGuard: CanActivateFn = (route, state) => {
   const authService = inject(AuthService);
-  const router = inject(Router);
 
   // Check if token was passed via URL (from gem-web redirect after login)
   const hadTokenInUrl = extractAndSaveTokenFromUrl();
+
+  // Cookie auth: AuthBoot already validated the cookie during app init.
+  // If the user wasn't authenticated, commitRedirect() already fired and
+  // the browser is navigating away — this code never actually activates.
+  if (environment.useCookieAuth) {
+    return true;
+  }
+
+  const router = inject(Router);
 
   return authService.verifyToken().pipe(
     map((isValid) => {

@@ -29,13 +29,23 @@ import { AuthService } from '@core/services/auth';
 import { UserStorageService, UsuarioLogeado } from '@core/services/user-storage';
 import { Usuario } from '@core/interfaces';
 import { environment } from '@/environments/environment';
+import { Observable, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 
 const STORAGE_KEY_ACCESS = 'access_token';
 
 export type BootResult =
   | { kind: 'hydrate' }
-  | { kind: 'redirect'; url: string }
-  | { kind: 'idle' };
+  | { kind: 'redirect' };
+
+/**
+ * Returns an Observable when the boot probe needs to block route activation
+ * (cookie auth), or a sync BootResult for the dev bypass path. The caller
+ * (`provideAppInitializer` in app.config.ts) awaits the Observable before
+ * route evaluation, ensuring the auth guard never fires before the probe
+ * completes.
+ */
+export type BootRunResult = Observable<BootResult> | BootResult;
 
 @Injectable({ providedIn: 'root' })
 export class AuthBoot {
@@ -44,39 +54,40 @@ export class AuthBoot {
   private userStorage = inject(UserStorageService);
 
   /**
-   * Run the boot probe. Returns a structured `BootResult` describing the
-   * action — caller is responsible for the actual side-effect (typically
-   * `window.location.href = result.url` for `kind: 'redirect'`).
+   * Run the boot probe. Returns:
+   * - `Observable<BootResult>` when an HTTP probe is needed (cookie auth).
+   *   The caller awaits it so route activation blocks until the probe
+   *   completes.
+   * - `BootResult` for the sync dev bypass (token-in-URL).
    */
-  run(): BootResult {
+  run(): BootRunResult {
     // Dev bypass: capture ?token= from URL. No HTTP probe, no redirect.
-    if (!environment.useCookieAuth && this.consumeTokenFromUrl()) {
+    if (this.consumeTokenFromUrl()) {
       return { kind: 'hydrate' };
     }
 
     const profileUrl = `${environment.API_URL}/auth/profile`;
-    this.http
-      .get<{ usuario: Usuario }>(profileUrl, {
-        withCredentials: true,
-        headers: { 'X-Verify-Only': 'true' },
-      })
-      .subscribe({
-        next: (res) => {
-          this.userStorage.setUsuario(res.usuario as unknown as UsuarioLogeado, false);
-          this.authService.hydrateUser(res.usuario);
-        },
-        error: (err) => {
-          if (err?.status === 401) {
-            const url = this.buildRedirectUrl();
-            this.commitRedirect(url);
-          }
-        },
-      });
-
-    // The probe runs async; the synchronous return is "idle" — the caller
-    // will receive the final action via the side-effect of the AppInitializer
-    // (it just sets `window.location.href` in the error branch).
-    return { kind: 'idle' };
+    return this.http.get<any>(profileUrl, {
+      withCredentials: true,
+      headers: { 'X-Verify-Only': 'true' },
+    }).pipe(
+      map((res) => {
+        const user = res.usuario ?? res;
+        this.userStorage.setUsuario(user as unknown as UsuarioLogeado, false);
+        this.authService.hydrateUser(user);
+        return { kind: 'hydrate' as const };
+      }),
+      catchError((err) => {
+        if (err?.status === 401) {
+          const url = this.buildRedirectUrl();
+          this.commitRedirect(url);
+        }
+        // Return a completing observable — redirect already fired via
+        // commitRedirect / window.location.href, so Angular will never
+        // activate the blocked route.
+        return of({ kind: 'redirect' as const });
+      }),
+    );
   }
 
   /**

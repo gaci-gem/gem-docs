@@ -8,25 +8,19 @@
 // the same shape so TypeScript structural typing stays clean.
 
 export const environment = {
-  production: false,
+  production: true,
 
-  // Base URL of the gem-api backend (HTTPS for test/prod placeholder +
-  // localhost for dev). Consumed by HttpClient calls via cookie/bearer.
-  API_URL: 'https://makima-v2.julitorossian.dev',
+  // Replaced at container startup by entrypoint.sh via environment variables
+  API_URL: '__API_URL__',
+  GEM_WEB_URL: '__GEM_WEB_URL__',
 
-  // Base URL of gem-web (origin the user lands on when no cookie is set
-  // and the boot probe comes back 401). Boot.auth-boot.spec.ts uses this
-  // to construct the redirect target.
-  GEM_WEB_URL: 'https://gem-web.julitorossian.dev',
-
-  // Cross-app shared auth fields (added in Slice 3).
-  loginUrl: 'https://gem-web.julitorossian.dev/auth/sign-in',
-  apiBaseUrl: 'https://makima-v2.julitorossian.dev', // alias of API_URL
+  // Cross-app shared auth fields using placeholders
+  loginUrl: '__GEM_WEB_URL__/login',
+  apiBaseUrl: '__API_URL__', // alias of API_URL
   cookieName: 'token',
-  cookieOnlyAuth: false, // future flag (Slice 4); wired so literal is reserved
+  cookieOnlyAuth: true, // test/prod: cookies are mandatory for SSO
   useCookieAuth: true, // test/prod: cookie is the credential
   trustedReturnOrigins: [
-    'https://gem-docs.julitorossian.dev',
-    'https://gem-web.julitorossian.dev',
+    '__GEM_WEB_URL__',
   ] as string[],
 };

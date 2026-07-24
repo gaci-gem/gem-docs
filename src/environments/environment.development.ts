@@ -13,7 +13,7 @@ export const environment = {
   API_URL: 'http://localhost:4000',
   GEM_WEB_URL: 'http://localhost:4200',
 
-  loginUrl: 'http://localhost:4200/auth/sign-in',
+  loginUrl: 'http://localhost:4200/login',
   apiBaseUrl: 'http://localhost:4000',
   cookieName: 'token',
   cookieOnlyAuth: false,

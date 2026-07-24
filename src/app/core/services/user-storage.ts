@@ -27,7 +27,13 @@ export class UserStorageService {
 
   getUsuario(): UsuarioLogeado | null {
     const raw = localStorage.getItem(STORAGE_KEY) ?? sessionStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      this.clearUsuario();
+      return null;
+    }
   }
 
   clearUsuario(): void {

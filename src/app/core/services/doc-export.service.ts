@@ -164,7 +164,9 @@ export class DocExportService {
    */
   private async markdownToHtml(markdown: string): Promise<string> {
     const result = marked.parse(markdown, { async: false });
-    return typeof result === 'string' ? result : String(result);
+    const html = typeof result === 'string' ? result : String(result);
+    // Replace hardcoded dev URLs with the real API URL so exported images resolve
+    return html.replace(/http:\/\/localhost:4000/g, environment.API_URL);
   }
 }
 

@@ -16,6 +16,7 @@ import { authInterceptor } from '@core/interceptors/auth-interceptor';
 import { loadingInterceptor } from '@core/interceptors/loading-interceptor';
 import { credentialsInterceptor } from '@core/interceptors/credentials-interceptor';
 import { AuthBoot } from '@core/auth/boot';
+import { Observable } from 'rxjs';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -39,8 +40,13 @@ export const appConfig: ApplicationConfig = {
     ConfirmationService,
     MessageService,
     // Slice 3 (shared-auth-cross-origin): app-initializer fires the cookie
-    // boot probe BEFORE the first route activates. The auth guard is then
-    // re-evaluated on every navigation; the boot probe is a one-shot.
-    provideAppInitializer(() => inject(AuthBoot).run()),
+    // boot probe and BLOCKS route activation until it completes. The auth
+    // guard fires AFTER the probe, so it never redirects prematurely.
+    provideAppInitializer(() => {
+      const result = inject(AuthBoot).run();
+      // Return the Observable so Angular awaits it before route evaluation
+      if (result instanceof Observable) return result;
+      return;
+    }),
   ],
 };

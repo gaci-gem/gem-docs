@@ -47,12 +47,13 @@ export class AuthService {
     }
 
     // Make HTTP call with X-Verify-Only header so interceptor knows NOT to try refresh on 401
-    return this.http.get<{ usuario: Usuario }>(`${environment.API_URL}/auth/profile`, {
+    return this.http.get<any>(`${environment.API_URL}/auth/profile`, {
       headers: { 'X-Verify-Only': 'true' }
     }).pipe(
       tap(res => {
-        this.currentUserSubject.next(res.usuario);
-        this.userStorage.setUsuario(res.usuario as unknown as UsuarioLogeado, false);
+        const user = res.usuario ?? res;
+        this.currentUserSubject.next(user);
+        this.userStorage.setUsuario(user as unknown as UsuarioLogeado, false);
       }),
       map(() => true),
       catchError(err => {
