@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { AppVersion, VersionService } from '@core/services/version';
 
 @Component({
@@ -7,7 +8,8 @@ import { AppVersion, VersionService } from '@core/services/version';
   templateUrl: './footer.html',
   styleUrls: ['./footer.scss'],
   imports: [
-    CommonModule
+    CommonModule,
+    RouterLink,
   ]
 })
 export class Footer implements OnInit {

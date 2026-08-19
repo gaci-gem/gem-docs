@@ -1,4 +1,5 @@
 <footer [ngClass]="{ 'footer-test': !isProdBuild }" class="footer text-end p-2 text-gray-500 text-sm">
+  <a routerLink="/changelog" class="me-3">Ver novedades</a>
   @if (versionInfo){
     <ng-container>
       Versión: {{ versionInfo.version }}

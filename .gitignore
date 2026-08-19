@@ -30,6 +30,7 @@ yarn-error.log
 
 # Miscellaneous
 /.angular/cache
+src/assets/version.json
 .sass-cache/
 /connect.lock
 /coverage

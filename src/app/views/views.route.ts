@@ -4,8 +4,14 @@ import { HomeComponent } from './home/home.component';
 import { DocsListComponent } from './docs/docs-list.component';
 import { DocEditorComponent } from './docs/doc-editor.component';
 import { EspaciosComponent } from './espacios/espacios.component';
+import { ChangelogComponent } from './changelog/changelog.component';
 
 export const VIEWS_ROUTES: Routes = [
+  {
+    path: 'changelog',
+    component: ChangelogComponent,
+    data: { title: 'Novedades' },
+  },
   {
     path: 'home',
     component: HomeComponent,

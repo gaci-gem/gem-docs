@@ -1,12 +1,16 @@
 {
   "name": "gem-docs",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "prebuild": "npm run write-version",
+    "build:development": "ng build --configuration development",
+    "prebuild:development": "npm run write-version",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "write-version": "node tools/write-version.js"
   },
   "prettier": {
     "printWidth": 100,
