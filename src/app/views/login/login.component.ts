@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '@core/services/auth';
-import { environment } from '@/environments/environment';
 import { NgIcon } from '@ng-icons/core';
 import { finalize } from 'rxjs';
 
@@ -230,10 +229,10 @@ export class LoginComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    // Si ya tiene sesión válida, redirigir a gem-web
+    // Reuse the shared GEM session and keep the user inside gem-docs.
     this.authService.verifyToken().subscribe(isValid => {
       if (isValid) {
-        window.location.href = environment.GEM_WEB_URL;
+        void this.router.navigate(['/home']);
       }
     });
   }

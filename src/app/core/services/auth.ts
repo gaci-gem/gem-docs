@@ -32,13 +32,10 @@ export class AuthService {
   }
 
   isAuthenticated(): boolean {
-    return !!this.getAccessToken();
+    return !!this.userStorage.getUsuario() || !!this.getAccessToken();
   }
 
   verifyToken(): Observable<boolean> {
-    const token = this.getAccessToken();
-    if (!token) return of(false);
-
     // Try to restore user from storage first (same user data key as gem-web)
     const storedUser = this.userStorage.getUsuario();
     if (storedUser) {
@@ -63,9 +60,11 @@ export class AuthService {
     );
   }
 
-  logout(): void {
-    // Clear only gem-docs local user data — tokens stay for gem-web
-    this.clearTokens();
+  logout(): Observable<void> {
+    return this.http.post<void>(`${environment.API_URL}/auth/logout`, {}).pipe(
+      catchError(() => of(void 0)),
+      tap(() => this.clearTokens()),
+    );
   }
 
   /**
@@ -97,23 +96,29 @@ export class AuthService {
     return this.currentUserSubject.getValue();
   }
 
-  refreshToken(): Observable<{ accessToken: string; refreshToken: string }> {
+  refreshToken(): Observable<{ accessToken?: string; refreshToken?: string }> {
     const refresh = this.getRefreshToken();
-    return this.http.post<{ accessToken: string; refreshToken: string }>(
+    return this.http.post<{ accessToken?: string; refreshToken?: string }>(
       `${environment.API_URL}/auth/refresh`,
-      { refreshToken: refresh }
+      refresh ? { refreshToken: refresh } : {}
     );
   }
 
-  login(credentials: { email: string; password: string }, rememberMe = false): Observable<{ accessToken: string; refreshToken: string; usuario: Usuario }> {
-    return this.http.post<{ accessToken: string; refreshToken: string; usuario: Usuario }>(
+  login(credentials: { email: string; password: string }, rememberMe = false): Observable<{ accessToken?: string; refreshToken?: string; usuario: Usuario }> {
+    return this.http.post<{ accessToken?: string; refreshToken?: string; usuario: Usuario }>(
       `${environment.API_URL}/auth/login`,
-      credentials
+      { ...credentials, usuario: credentials.email, rememberMe }
     ).pipe(
       tap(res => {
-        const storage = rememberMe ? localStorage : sessionStorage;
-        storage.setItem(this.accessTokenKey, res.accessToken);
-        storage.setItem(this.refreshTokenKey, res.refreshToken);
+        localStorage.removeItem(this.accessTokenKey);
+        localStorage.removeItem(this.refreshTokenKey);
+        sessionStorage.removeItem(this.accessTokenKey);
+        sessionStorage.removeItem(this.refreshTokenKey);
+        if (res.accessToken && res.refreshToken) {
+          const storage = rememberMe ? localStorage : sessionStorage;
+          storage.setItem(this.accessTokenKey, res.accessToken);
+          storage.setItem(this.refreshTokenKey, res.refreshToken);
+        }
         this.currentUserSubject.next(res.usuario);
         this.userStorage.setUsuario(res.usuario as unknown as UsuarioLogeado, rememberMe);
       })

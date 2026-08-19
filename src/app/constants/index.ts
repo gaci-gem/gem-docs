@@ -24,8 +24,8 @@ export const credits = {
 export const appName = 'GEM'
 export const appTitle = 'Gaci Eventos'
 export const appLogo = 'assets/images/LOGO.svg'
-export const appLogoCompleto_light = 'assets/images/LOGO_GEM_blanco.png'
-export const appLogoCompleto_dark = 'assets/images/LOGO_GEM_negro.png'
+export const appLogoCompleto_light = 'assets/images/GEM-DOCS-Blanco.png'
+export const appLogoCompleto_dark = 'assets/images/GEM-DOCS-Negro.png'
 
 export const appDescription: string =
   'Simple is best admin dashboard template. Perfect for building CRM, CMS, project management tools, and custom web apps with clean UI, responsive design, and powerful features.'

@@ -102,8 +102,7 @@ export class UserProfile implements OnInit, AfterViewInit {
   }
 
   logout() {
-    this.authService.logout();
-    this.router.navigateByUrl('/login')
+    this.authService.logout().subscribe(() => this.router.navigateByUrl('/login'))
   }
 
   getFotoPerfil(): string {
