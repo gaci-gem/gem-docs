@@ -1,6 +1,6 @@
 {
   "name": "gem-docs",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -60,6 +60,7 @@
     "@tiptap/extension-underline": "^3.26.1",
     "@tiptap/pm": "^3.26.1",
     "@tiptap/starter-kit": "^3.26.1",
+    "@tiptap/suggestion": "3.26.1",
     "bootstrap": "^5.3.7",
     "chart.js": "^4.5.0",
     "choices.js": "^11.1.0",

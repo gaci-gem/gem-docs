@@ -192,14 +192,32 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 24px;
-  height: 24px;
+  width: 6.5rem;
+  min-width: 6.5rem;
+  height: 2rem;
+  color: var(--tt-text-secondary, #6b7280);
+  font-size: 0.75rem;
+  white-space: nowrap;
 
   svg { stroke: currentColor; flex-shrink: 0; }
 }
 
 .status-saved {
   color: #16a34a;
+}
+
+.status-error {
+  color: #dc2626;
+}
+
+.status-retry {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
 }
 
 // -----------------------------------------------------------------------------

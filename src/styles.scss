@@ -244,6 +244,18 @@ body.editing-doc {
   s, del { text-decoration: line-through; color: var(--tt-text-secondary); }
 }
 
+.ProseMirror .editor-reference {
+  color: var(--reference-color, var(--tt-primary));
+  font-weight: 650;
+  text-decoration-line: underline;
+  text-decoration-thickness: 0.1em;
+  text-decoration-style: solid;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+  transition: color 120ms ease;
+}
+
+
 // Gapcursor
 .ProseMirror-gapcursor::after {
   border-top: 1px solid var(--tiptap-primary);
@@ -441,4 +453,3 @@ body.editing-doc {
     code { color: #e2e8f0 !important; background: none !important; }
   }
 }
-

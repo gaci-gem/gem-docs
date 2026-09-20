@@ -10,6 +10,8 @@ import {
   output,
   signal,
   inject,
+  ApplicationRef,
+  EnvironmentInjector,
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -17,6 +19,7 @@ import { FormsModule } from '@angular/forms';
 
 // Tiptap core
 import { Editor } from '@tiptap/core';
+import { DOMParser as ProseMirrorDOMParser } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
@@ -38,6 +41,15 @@ import { gfm } from 'turndown-plugin-gfm';
 import { ToolbarService } from '../toolbar/toolbar.service';
 import { ImageLightboxService } from '@core/services/image-lightbox.service';
 import { environment } from '@/environments/environment';
+import { Router } from '@angular/router';
+import { UsuarioService } from '@core/services/usuario';
+import { EventoService } from '@core/services/evento.service';
+import { DocService } from '@core/services/doc.service';
+import { ReferenceNode, ReferenceAttrs, ReferenceType, isDocumentReference, referenceCatalogKey, referenceLabelFor } from './reference-node';
+import { createSuggestionPlugin, docSuggestionItems, eventSuggestionItems, ReferenceSuggestionItem, userSuggestionItems } from './suggestions';
+import { FiltroActivo } from '@/app/constants/filtros_activo';
+import type { ReferenceTarget } from '@core/services/reference-drawer.service';
+import { referenceTargetFromElement } from './reference-click';
 
 export interface TiptapConfig {
   placeholder?: string;
@@ -93,6 +105,12 @@ export class EditorComponent implements ControlValueAccessor {
   private toolbarService = inject(ToolbarService);
   private imageLightbox = inject(ImageLightboxService);
   private destroyRef = inject(DestroyRef);
+  private usuarioService = inject(UsuarioService);
+  private eventoService = inject(EventoService);
+  private docService = inject(DocService);
+  private router = inject(Router);
+  private appRef = inject(ApplicationRef);
+  private environmentInjector = inject(EnvironmentInjector);
 
   @ViewChild('editorRef') editorRef!: ElementRef;
 
@@ -117,6 +135,8 @@ export class EditorComponent implements ControlValueAccessor {
 
   saveStatusChange = output<SaveStatus>();
 
+  referenceOpen = output<Exclude<ReferenceTarget, null>>();
+
   // ── Internal state ──────────────────────────────────────────────────
 
   private editor?: Editor;
@@ -124,6 +144,9 @@ export class EditorComponent implements ControlValueAccessor {
   private currentContent = '';
   /** Tracks disabled state coming from the ControlValueAccessor. */
   private cvaDisabled = signal(false);
+  private users: ReferenceSuggestionItem[] = [];
+  private events: ReferenceSuggestionItem[] = [];
+  private docs: ReferenceSuggestionItem[] = [];
 
   private turndown = new TurndownService({
     headingStyle: 'atx',
@@ -165,12 +188,26 @@ export class EditorComponent implements ControlValueAccessor {
    * letting Tiptap select the image node.
    *
    * `stopPropagation` prevents Tiptap's node-selection logic from firing
-   * alongside the lightbox open. We don't `preventDefault` so the browser
-   * still treats the click normally (e.g., middle-click for new tab still
-   * works).
+   * alongside the navigation or lightbox open.
    */
   onEditorClick(event: MouseEvent): void {
     const target = event.target as HTMLElement | null;
+    const reference = target?.closest<HTMLElement>('[data-reference-type]');
+    const referenceType = reference?.dataset['referenceType'];
+    const referenceId = reference?.dataset['referenceId'];
+    const referenceTarget = referenceTargetFromElement(target);
+    if (referenceTarget) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.referenceOpen.emit(referenceTarget);
+      return;
+    }
+    if (isDocumentReference(referenceType, referenceId)) {
+      event.preventDefault();
+      event.stopPropagation();
+      void this.router.navigate(['/docs', referenceId]);
+      return;
+    }
     if (target && target.tagName === 'IMG') {
       const img = target as HTMLImageElement;
       if (img.src) {
@@ -223,6 +260,7 @@ export class EditorComponent implements ControlValueAccessor {
   }
 
   private async createEditor(): Promise<void> {
+    this.loadReferenceData();
     this.editor = new Editor({
       element: this.editorRef.nativeElement,
       content: this.loadContentSync(this.initialContent()),
@@ -232,6 +270,7 @@ export class EditorComponent implements ControlValueAccessor {
           link: false,
           underline: false,
         }),
+        ReferenceNode,
         Underline,
         Link.configure({
           openOnClick: false,
@@ -299,6 +338,11 @@ export class EditorComponent implements ControlValueAccessor {
       },
     });
 
+    const suggestionContext = { appRef: this.appRef, environmentInjector: this.environmentInjector };
+    this.editor.registerPlugin(createSuggestionPlugin({ ...suggestionContext, editor: this.editor, char: '@', type: 'user', pluginKey: 'user-reference', loadItems: () => this.users, command: this.insertReference.bind(this) }));
+    this.editor.registerPlugin(createSuggestionPlugin({ ...suggestionContext, editor: this.editor, char: '#', type: 'event', pluginKey: 'event-reference', loadItems: () => this.events, command: this.insertReference.bind(this) }));
+    this.editor.registerPlugin(createSuggestionPlugin({ ...suggestionContext, editor: this.editor, char: '[', type: 'doc', pluginKey: 'doc-reference', loadItems: () => this.docs, command: this.insertReference.bind(this), doubleBracket: true }));
+
     this.isInitialized = true;
     // Register editor with ToolbarService
     this.toolbarService.setEditor(this.editor);
@@ -311,6 +355,59 @@ export class EditorComponent implements ControlValueAccessor {
     if (initial && initial !== this.currentContent) {
       this.loadContent(initial);
     }
+    this.resolveReferenceLabels();
+  }
+
+  private loadReferenceData(): void {
+    this.usuarioService.getAll(FiltroActivo.ALL).subscribe({ next: (users) => {
+      this.users = userSuggestionItems(users);
+      this.resolveReferenceLabels();
+    } });
+    this.eventoService.listComplete({ cerrado: FiltroActivo.ALL }).subscribe({ next: (events) => {
+      this.events = eventSuggestionItems(events);
+      this.resolveReferenceLabels();
+    } });
+    this.docService.list({ silent: true }).subscribe({ next: (docs) => {
+      this.docs = docSuggestionItems(docs);
+      this.resolveReferenceLabels();
+    } });
+  }
+
+  private resolveReferenceLabels(): void {
+    if (!this.editor) return;
+    const labels = new Map<string, string>();
+    const colors = new Map<string, string>();
+    for (const item of this.users) {
+      labels.set(referenceCatalogKey('user', item.id), item.label);
+      if (item.color) colors.set(referenceCatalogKey('user', item.id), item.color);
+    }
+    for (const item of this.events) {
+      labels.set(referenceCatalogKey('event', item.id), item.label);
+      if (item.color) colors.set(referenceCatalogKey('event', item.id), item.color);
+    }
+    for (const item of this.docs) labels.set(referenceCatalogKey('doc', item.id), item.label);
+    let transaction = this.editor.state.tr;
+    let changed = false;
+    this.editor.state.doc.descendants((node, pos) => {
+      if (node.type.name !== 'reference') return;
+      const label = referenceLabelFor(labels, {
+        referenceType: node.attrs['referenceType'] as ReferenceType,
+        id: node.attrs['id'],
+      });
+      const referenceType = node.attrs['referenceType'] as ReferenceType;
+      const color = referenceType === 'user' || referenceType === 'event'
+        ? colors.get(referenceCatalogKey(referenceType, node.attrs['id']))
+        : undefined;
+      if ((label && label !== node.attrs['label']) || color !== node.attrs['color']) {
+        transaction = transaction.setNodeMarkup(pos, undefined, { ...node.attrs, label: label ?? node.attrs['label'], color });
+        changed = true;
+      }
+    });
+    if (changed) this.editor.view.dispatch(transaction.setMeta('preventUpdate', true));
+  }
+
+  private insertReference(editor: Editor, range: { from: number; to: number }, item: ReferenceSuggestionItem, type: ReferenceType): void {
+    editor.chain().focus().deleteRange(range).insertContent({ type: 'reference', attrs: { referenceType: type, id: item.id, label: item.label, color: type === 'user' || type === 'event' ? item.color : undefined } satisfies ReferenceAttrs }).insertContent(' ').run();
   }
 
   /**
@@ -328,7 +425,11 @@ export class EditorComponent implements ControlValueAccessor {
     const normalized = content.replace(/http:\/\/localhost:4000/g, environment.API_URL);
 
     if (this.looksLikeHtml(normalized)) {
-      this.editor.commands.setContent(normalized);
+      const container = document.createElement('div');
+      container.innerHTML = normalized;
+      const parsed = ProseMirrorDOMParser.fromSchema(this.editor.schema).parse(container);
+      this.editor.commands.setContent(parsed, { emitUpdate: false });
+      this.resolveReferenceLabels();
       return;
     }
 
@@ -336,6 +437,7 @@ export class EditorComponent implements ControlValueAccessor {
     if (mdStorage.markdown?.setMarkdown) {
       try {
         mdStorage.markdown.setMarkdown(normalized);
+        this.resolveReferenceLabels();
         return;
       } catch (err) {
         console.error('[editor] setMarkdown failed, falling back to setContent:', err);
@@ -344,13 +446,12 @@ export class EditorComponent implements ControlValueAccessor {
 
     // Fallback: if tiptap-markdown isn't loaded or threw, treat as plain HTML
     this.editor.commands.setContent(normalized);
+    this.resolveReferenceLabels();
   }
 
-  /** Synchronous version used during initial editor creation (extension storage not ready) */
+  /** Defer parsing until the Markdown extension and legacy HTML parser are ready. */
   private loadContentSync(content: string): string {
-    // We pass through as-is; the Markdown extension will re-parse via setContent
-    // on first onUpdate if needed. For initial load, plain string works.
-    return content;
+    return content ? '' : content;
   }
 
   private getMarkdownFromEditor(): string {

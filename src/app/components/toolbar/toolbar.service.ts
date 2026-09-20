@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { Editor } from '@tiptap/core';
 
-export type SaveStatus = 'idle' | 'saving' | 'saved';
+export type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
 
 @Injectable({ providedIn: 'root' })
 export class ToolbarService {
