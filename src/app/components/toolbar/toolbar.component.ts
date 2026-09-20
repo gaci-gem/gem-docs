@@ -133,12 +133,20 @@ import { ToolbarService } from './toolbar.service';
         </button>
         <p-menu #menu [model]="items" [popup]="true" appendTo="body" />
 
-        <!-- Status indicator — always rendered so the 24px slot is reserved
-             to the RIGHT of the Save button. Showing/hiding the SVG inside
-             doesn't shift the layout. -->
-        <span class="status-indicator" [class.status-saved]="toolbarService.saveStatus() === 'saved'">
-          @if (toolbarService.saveStatus() === 'saved') {
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <!-- Fixed-width status slot prevents the toolbar from moving. -->
+        <span
+          class="status-indicator"
+          [class.status-saved]="toolbarService.saveStatus() === 'saved'"
+          [class.status-error]="toolbarService.saveStatus() === 'error'"
+          role="status"
+          aria-live="polite">
+          @switch (toolbarService.saveStatus()) {
+            @case ('dirty') { <span>Sin guardar</span> }
+            @case ('saving') { <span>Guardando...</span> }
+            @case ('saved') { <span>Guardado</span> }
+            @case ('error') {
+              <button type="button" class="status-retry" (click)="save.emit()">Reintentar</button>
+            }
           }
         </span>
       </div>

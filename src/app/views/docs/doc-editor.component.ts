@@ -7,7 +7,7 @@ import { EspacioService } from '@core/services/espacio.service';
 import { AuthService } from '@core/services/auth';
 import { UserStorageService } from '@core/services/user-storage';
 import { DocExportService } from '@core/services/doc-export.service';
-import { ToolbarService } from '../../components/toolbar/toolbar.service';
+import { SaveStatus, ToolbarService } from '../../components/toolbar/toolbar.service';
 import { EditorComponent, TiptapConfig } from '../../components/editor/editor.component';
 import { ToolbarComponent } from '../../components/toolbar/toolbar.component';
 import { ImportDocDialogComponent } from './components/import-doc-dialog/import-doc-dialog.component';
@@ -15,6 +15,7 @@ import { MetadataDialogComponent } from './components/metadata-dialog/metadata-d
 import { ImageLightboxComponent } from '../../components/image-lightbox/image-lightbox.component';
 import { Espacio } from '@core/interfaces/espacio';
 import { DocMetadata } from '@core/interfaces/doc-metadata';
+import { ReferenceDrawerService, ReferenceTarget } from '@core/services/reference-drawer.service';
 
 /**
  * Fallback metadata for a doc that the backend hasn't populated yet (no
@@ -74,9 +75,10 @@ import { showError, showInfo } from '../../utils/message-utils';
           ></div>
 
           <!-- Editor flows naturally after the title -->
-          <app-editor
+            <app-editor
             [initialContent]="contenido()"
             (contentChange)="onContentChange($event)"
+            (referenceOpen)="openReference($event)"
           />
         </div>
       </div>
@@ -114,6 +116,7 @@ export class DocEditorComponent {
   private messageService = inject(MessageService);
   private exportService = inject(DocExportService);
   private destroyRef = inject(DestroyRef);
+  private referenceDrawer = inject(ReferenceDrawerService);
 
   @ViewChild('titleEl', { static: true }) titleEl!: ElementRef<HTMLElement>;
 
@@ -138,7 +141,17 @@ export class DocEditorComponent {
   breadcrumbItems = signal<MenuItem[]>([]);
   breadcrumbHome: MenuItem = { icon: 'pi pi-home', routerLink: '/home' };
 
+  openReference(target: Exclude<ReferenceTarget, null>): void {
+    if (target.type === 'user') this.referenceDrawer.openUser(target.id);
+    else this.referenceDrawer.openEvent(target.id);
+  }
+
   private autoSaveSubject = new Subject<void>();
+  private saveInFlight = false;
+  private pendingAutoSave = false;
+  private pendingManualSave = false;
+  private savedSnapshot = { titulo: '', contenido: '' };
+  private savedStatusTimeout?: ReturnType<typeof setTimeout>;
 
   constructor() {
     document.body.classList.add('editing-doc');
@@ -155,6 +168,8 @@ export class DocEditorComponent {
           // New doc mode - reset fields
           this.titulo = '';
           this.contenido.set('');
+          this.savedSnapshot = { titulo: '', contenido: '' };
+          this.setSaveStatus('idle');
           this.titleEl.nativeElement.innerText = '';
           // No loaded doc yet — metadata dialog will show empty state if opened.
           this.currentDoc.set(null);
@@ -188,6 +203,9 @@ export class DocEditorComponent {
   onTitleInput(event: Event): void {
     const el = event.target as HTMLElement;
     this.titulo = el.innerText || '';
+    this.buildBreadcrumb();
+    this.markDirty();
+    this.autoSaveSubject.next();
   }
 
   private loadDoc(id: string): void {
@@ -205,6 +223,8 @@ export class DocEditorComponent {
         this.currentDoc.set({ id: doc.id, metadata: doc.metadata });
         this.loadEspacioNombre(doc.espacioId);
         this.parseLinks(doc.content);
+        this.savedSnapshot = { titulo: doc.titulo, contenido: doc.content };
+        this.setSaveStatus('idle');
       },
       error: () => showError(this.messageService, 'Error', 'No se pudo cargar el documento')
     });
@@ -296,18 +316,22 @@ export class DocEditorComponent {
   onContentChange(content: string): void {
     this.contenido.set(content);
     this.parseLinks(content);
-    // Trigger auto-save debounce
+    this.markDirty();
     this.autoSaveSubject.next();
   }
 
   parseLinks(content: string): void {
-    const eventoMatches = content.match(/@evento:\d+/g) || [];
-    const usuarioMatches = content.match(/@usuario:\w+/g) || [];
-    this.detectedLinks.set([...eventoMatches, ...usuarioMatches]);
+    const references = content.match(/@(?:evento|usuario):[\w-]+|\[\[[^\]\n]+\]\]/g) || [];
+    this.detectedLinks.set(references);
   }
 
   async save(): Promise<void> {
     if (!this.titulo.trim()) return;
+
+    if (this.saveInFlight) {
+      this.pendingManualSave = true;
+      return;
+    }
 
     // For new docs without espacioId, create an event space automatically
     let espacioId = this.espacioId;
@@ -319,35 +343,57 @@ export class DocEditorComponent {
       }
     }
 
+    this.startSave(true, espacioId);
+  }
+
+  private startSave(manual: boolean, espacioId = this.espacioId): void {
+    if (this.saveInFlight) {
+      if (manual) this.pendingManualSave = true;
+      else this.pendingAutoSave = true;
+      return;
+    }
+
+    const titulo = this.titulo;
     const contenido = this.contenido();
-    const observable = this.docId
-      ? this.docService.update(this.docId, { titulo: this.titulo, content: contenido })
-      : this.docService.create({ titulo: this.titulo, content: contenido, espacioId: espacioId || 'default' });
+    const docId = this.docId;
+    this.saveInFlight = true;
+    this.saving.set(true);
+    this.setSaveStatus('saving');
+    const observable = docId
+      ? this.docService.update(docId, { titulo, content: contenido }, manual ? undefined : { silent: true })
+      : this.docService.create({ titulo, content: contenido, espacioId: espacioId || 'default' }, manual ? undefined : { silent: true });
 
     observable.subscribe({
       next: (result) => {
-        // Brief "saved" indicator, then hide
-        this.toolbarService.setSaveStatus('saved');
-        setTimeout(() => this.toolbarService.setSaveStatus('idle'), 3000);
-        // If new doc, update docId and navigate
-        if (!this.docId && result?.id) {
+        const created = !docId && !!result?.id;
+        if (created) {
           this.docId = result.id;
           // Track the new doc so the metadata dialog has something to show
           // (it'll be empty until an evento links to it).
           this.currentDoc.set({ id: result.id, metadata: result.metadata });
-          this.router.navigate(['/docs', this.docId]);
+          if (manual) this.router.navigate(['/docs', this.docId]);
         } else if (result?.id) {
           // Existing doc — refresh metadata so any server-side update is
           // reflected the next time the user opens the dialog.
           this.currentDoc.set({ id: result.id, metadata: result.metadata });
         }
-        // Notify sidebar to refresh
+        this.savedSnapshot = { titulo, contenido };
+        this.saveInFlight = false;
+        this.saving.set(false);
+        this.setSaveStatus('saved');
         this.docService.notifyChanges();
+        this.processPendingSave();
       },
       error: (err) => {
-        this.toolbarService.setSaveStatus('idle');
+        this.saveInFlight = false;
+        this.saving.set(false);
+        this.setSaveStatus('error');
         const msg = err?.error?.message || err?.message || JSON.stringify(err);
         showError(this.messageService, 'Error al guardar', msg);
+        const manual = this.pendingManualSave;
+        this.pendingManualSave = false;
+        this.pendingAutoSave = false;
+        if (manual) this.startSave(true);
       }
     });
   }
@@ -359,27 +405,35 @@ export class DocEditorComponent {
     // Don't auto-save new docs without espacioId — require manual save to create space
     if (!this.docId && !this.espacioId) return;
 
-    const contenido = this.contenido();
-    const observable = this.docId
-      ? this.docService.update(this.docId, { titulo: this.titulo, content: contenido }, { silent: true })
-      : this.docService.create({ titulo: this.titulo, content: contenido, espacioId: this.espacioId }, { silent: true });
+    this.startSave(false, this.espacioId);
+  }
 
-    observable.subscribe({
-      next: (result) => {
-        // If new doc, update docId for future auto-saves
-        if (!this.docId && result?.id) {
-          this.docId = result.id;
+  private markDirty(): void {
+    if (this.titulo !== this.savedSnapshot.titulo || this.contenido() !== this.savedSnapshot.contenido) {
+      this.setSaveStatus('dirty');
+    }
+  }
+
+  private setSaveStatus(status: SaveStatus): void {
+    if (this.savedStatusTimeout) clearTimeout(this.savedStatusTimeout);
+    this.toolbarService.setSaveStatus(status);
+    if (status === 'saved') {
+      this.savedStatusTimeout = setTimeout(() => {
+        if (!this.saveInFlight && this.titulo === this.savedSnapshot.titulo && this.contenido() === this.savedSnapshot.contenido) {
+          this.toolbarService.setSaveStatus('idle');
         }
-        // Brief "saved" indicator, then hide
-        this.toolbarService.setSaveStatus('saved');
-        setTimeout(() => this.toolbarService.setSaveStatus('idle'), 3000);
-        // Notify sidebar to refresh
-        this.docService.notifyChanges();
-      },
-      error: () => {
-        // Silent fail for auto-save — no user notification
-      }
-    });
+      }, 3000);
+    }
+  }
+
+  private processPendingSave(): void {
+    const manual = this.pendingManualSave;
+    const auto = this.pendingAutoSave;
+    this.pendingManualSave = false;
+    this.pendingAutoSave = false;
+    if (manual || (auto && (this.titulo !== this.savedSnapshot.titulo || this.contenido() !== this.savedSnapshot.contenido))) {
+      this.startSave(manual);
+    }
   }
 
   /** Open the .docx import dialog (triggered from the toolbar) */
@@ -465,6 +519,7 @@ export class DocEditorComponent {
         this.titleEl.nativeElement.innerText = payload.suggestedTitle;
       }
       this.buildBreadcrumb();
+      this.markDirty();
     }
 
     // Content
@@ -477,5 +532,7 @@ export class DocEditorComponent {
     } else {
       this.contenido.set(payload.markdown);
     }
+    this.markDirty();
+    this.autoSaveSubject.next();
   }
 }

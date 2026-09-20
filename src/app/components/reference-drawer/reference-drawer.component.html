@@ -1,0 +1,50 @@
+<p-drawer
+  [visible]="target() !== null"
+  position="right"
+  styleClass="reference-drawer"
+  [modal]="true"
+  [dismissible]="true"
+  [closeOnEscape]="true"
+  [closable]="false"
+  aria-label="Detalles de referencia"
+  (onHide)="close()"
+>
+  <ng-template #header>
+    <header class="drawer-header">
+      <div><p class="eyebrow">Referencia</p><h2>{{ target()?.type === 'user' ? 'Usuario' : 'Evento' }}</h2></div>
+      <button type="button" class="close-button" aria-label="Cerrar detalles" (click)="close()"><span aria-hidden="true">&times;</span></button>
+    </header>
+  </ng-template>
+
+  @if (loading()) {
+    <div class="inline-state" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span><span>Cargando detalles...</span></div>
+  } @else if (error()) {
+    <p class="inline-state error-state" role="alert">{{ error() }}</p>
+  } @else if (user(); as currentUser) {
+    <section class="reference-summary">
+      <div class="color-mark" [style.backgroundColor]="currentUser.color || '#64748b'" aria-hidden="true"></div>
+      <div><h3>{{ displayName(currentUser) }}</h3><p class="muted">@{{ currentUser.usuario }}</p></div>
+    </section>
+    <dl class="details-list">
+      <div><dt>Email</dt><dd><a [href]="'mailto:' + currentUser.email">{{ currentUser.email }}</a></dd></div>
+      <div><dt>Estado</dt><dd>{{ currentUser.activo ? 'Activo' : 'Inactivo' }}</dd></div>
+      @if (currentUser.roles?.length) { <div><dt>Roles</dt><dd>{{ displayRoles(currentUser.roles) }}</dd></div> }
+      @if (currentUser.adicionales?.length) { <div><dt>Datos adicionales</dt><dd>{{ currentUser.adicionales?.length }} disponibles</dd></div> }
+      @if (currentUser.eventosActuales?.length) { <div><dt>Eventos actuales</dt><dd>{{ currentUser.eventosActuales?.length }}</dd></div> }
+    </dl>
+  } @else if (event(); as currentEvent) {
+    <section class="reference-summary">
+      <div class="color-mark" [style.backgroundColor]="currentEvent.tipo.color || '#64748b'" aria-hidden="true"></div>
+      <div><h3>{{ eventCode(currentEvent) }}</h3><p class="muted">{{ currentEvent.titulo }}</p></div>
+    </section>
+    <dl class="details-list">
+      <div><dt>Estado</dt><dd>{{ currentEvent.estado || (currentEvent.cerrado ? 'Cerrado' : 'Abierto') }}</dd></div>
+      @if (currentEvent.tipo) { <div><dt>Tipo</dt><dd>{{ currentEvent.tipo.codigo }} · {{ currentEvent.tipo.descripcion }}</dd></div> }
+      @if (currentEvent.usuarioActual) { <div><dt>Usuario actual</dt><dd>{{ displayName(currentEvent.usuarioActual) }} (@{{ currentEvent.usuarioActual.usuario }})</dd></div> }
+      @if (currentEvent.cliente) { <div><dt>Cliente</dt><dd>{{ currentEvent.cliente.sigla }} · {{ currentEvent.cliente.nombre }}</dd></div> }
+      @if (currentEvent.producto) { <div><dt>Producto</dt><dd>{{ currentEvent.producto.sigla }} · {{ currentEvent.producto.nombre }}</dd></div> }
+      @if (currentEvent.modulo) { <div><dt>Módulo</dt><dd>{{ currentEvent.modulo.codigo }} · {{ currentEvent.modulo.nombre }}</dd></div> }
+      @if (currentEvent.etapaActualData) { <div><dt>Etapa actual</dt><dd>{{ currentEvent.etapaActualData.nombre }}</dd></div> }
+    </dl>
+  }
+</p-drawer>
