@@ -6,6 +6,14 @@
   background: var(--tt-surface, #ffffff);
 }
 
+:host-context(.dark) .error-msg,
+:host-context([data-bs-theme="dark"]) .error-msg,
+:host-context([data-theme="dark"]) .error-msg {
+  background: color-mix(in srgb, #ef4444 12%, var(--tt-surface));
+  color: #fca5a5;
+  border-top-color: color-mix(in srgb, #ef4444 35%, var(--tt-border));
+}
+
 // ---------------------------------------------------------------------------
 // Infinite page surface — the only element that scrolls
 // ---------------------------------------------------------------------------
@@ -22,13 +30,31 @@
   &::-webkit-scrollbar-track { background: transparent; }
 }
 
+.editor-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.editor-layout .doc-surface { min-width: 0; }
+
 .doc-surface-inner {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 3rem 1rem;
+  --doc-page-inline-padding: clamp(1rem, 5vw, 4rem);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: clamp(2rem, 5vw, 4rem) var(--doc-page-inline-padding);
   background: var(--tt-page-bg);
   min-height: 100%;
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.doc-surface-inner > app-milkdown-editor {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -68,4 +94,9 @@
   color: #dc2626;
   font-size: 0.875rem;
   border-top: 1px solid #fecaca;
+}
+
+@media (max-width: 760px) {
+  .editor-layout { position: relative; }
+  .editor-layout app-properties-panel { position: absolute; inset: 0 0 0 auto; z-index: 5; }
 }

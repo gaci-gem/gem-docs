@@ -1,0 +1,35 @@
+<aside class="properties-panel" aria-label="Propiedades">
+  <header class="properties-header">
+    <h2>Propiedades</h2>
+    <button type="button" class="icon-button" aria-label="Ocultar propiedades" title="Ocultar propiedades" (click)="close.emit()">×</button>
+  </header>
+
+  <section class="property-section" aria-label="Estado editorial">
+    @for (row of rows(); track row.key) {
+      @if (row.editorial) {
+        <label class="property-row">
+          <span>{{ row.key }}</span>
+          <input [formControl]="controlFor(row.key)" [attr.aria-label]="row.key" (blur)="updateProperty(row.key)" />
+          <button type="button" class="remove-button" [attr.aria-label]="'Eliminar ' + row.key" (click)="removeProperty(row.key)">×</button>
+        </label>
+      }
+    }
+  </section>
+
+  <section class="property-section" aria-label="Otras propiedades">
+    @for (row of rows(); track row.key) {
+      @if (!row.editorial) {
+        <label class="property-row">
+          <span>{{ row.key }}</span>
+          <input [formControl]="controlFor(row.key)" [attr.aria-label]="row.key" (blur)="updateProperty(row.key)" />
+          <button type="button" class="remove-button" [attr.aria-label]="'Eliminar ' + row.key" (click)="removeProperty(row.key)">×</button>
+        </label>
+      }
+    }
+    <div class="add-property">
+      <input [formControl]="newKey" aria-label="Nombre de propiedad" />
+      <input [formControl]="newValue" aria-label="Valor de propiedad" />
+      <button type="button" class="add-button" aria-label="Agregar propiedad" title="Agregar propiedad" (click)="addProperty()">+</button>
+    </div>
+  </section>
+</aside>

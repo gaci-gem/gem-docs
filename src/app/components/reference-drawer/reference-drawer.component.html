@@ -35,7 +35,15 @@
   } @else if (event(); as currentEvent) {
     <section class="reference-summary">
       <div class="color-mark" [style.backgroundColor]="currentEvent.tipo.color || '#64748b'" aria-hidden="true"></div>
-      <div><h3>{{ eventCode(currentEvent) }}</h3><p class="muted">{{ currentEvent.titulo }}</p></div>
+      <div>
+        <h3>
+          {{ eventCode(currentEvent) }}
+          @if (eventUrl(currentEvent); as url) {
+            <a [href]="url" target="_blank" rel="noopener noreferrer" aria-label="Open event in GEM (opens in a new tab)">↗</a>
+          }
+        </h3>
+        <p class="muted">{{ currentEvent.titulo }}</p>
+      </div>
     </section>
     <dl class="details-list">
       <div><dt>Estado</dt><dd>{{ currentEvent.estado || (currentEvent.cerrado ? 'Cerrado' : 'Abierto') }}</dd></div>

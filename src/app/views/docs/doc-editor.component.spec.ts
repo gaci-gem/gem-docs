@@ -60,6 +60,8 @@ describe('DocEditorComponent save flow', () => {
     component.espacioId = 'space-1';
     component.contenido.set('Contenido');
     fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-milkdown-editor')).not.toBeNull();
   });
 
   it('marks title edits as dirty', () => {

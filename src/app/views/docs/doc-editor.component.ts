@@ -8,10 +8,11 @@ import { AuthService } from '@core/services/auth';
 import { UserStorageService } from '@core/services/user-storage';
 import { DocExportService } from '@core/services/doc-export.service';
 import { SaveStatus, ToolbarService } from '../../components/toolbar/toolbar.service';
-import { EditorComponent, TiptapConfig } from '../../components/editor/editor.component';
+import { MilkdownEditorComponent } from '../../components/milkdown-editor/milkdown-editor.component';
 import { ToolbarComponent } from '../../components/toolbar/toolbar.component';
 import { ImportDocDialogComponent } from './components/import-doc-dialog/import-doc-dialog.component';
 import { MetadataDialogComponent } from './components/metadata-dialog/metadata-dialog.component';
+import { PropertiesPanelComponent } from './components/properties-panel/properties-panel.component';
 import { ImageLightboxComponent } from '../../components/image-lightbox/image-lightbox.component';
 import { Espacio } from '@core/interfaces/espacio';
 import { DocMetadata } from '@core/interfaces/doc-metadata';
@@ -37,6 +38,13 @@ const EMPTY_METADATA: DocMetadata = {
   titulo: null,
   eventoId: null,
 };
+
+const NEW_DOCUMENT_CONTENT = `---
+tipo: pagina
+estado: borrador
+---
+
+`;
 import { MenuItem } from 'primeng/api';
 import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription, debounceTime, Subject } from 'rxjs';
@@ -45,7 +53,7 @@ import { showError, showInfo } from '../../utils/message-utils';
 @Component({
   selector: 'app-doc-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [EditorComponent, ToolbarComponent, ImportDocDialogComponent, MetadataDialogComponent, ImageLightboxComponent, RouterLink, BreadcrumbModule],
+  imports: [MilkdownEditorComponent, ToolbarComponent, ImportDocDialogComponent, MetadataDialogComponent, PropertiesPanelComponent, ImageLightboxComponent, RouterLink, BreadcrumbModule],
   styleUrl: './doc-editor.component.scss',
   template: `
     <div class="doc-editor-page">
@@ -58,12 +66,15 @@ import { showError, showInfo } from '../../utils/message-utils';
         (importDoc)="openImportDialog()"
         (exportDocx)="exportDocx()"
         (exportPdf)="exportPdf()"
-        (viewMetadata)="openMetadataDialog()"
+        (viewMetadata)="openPropertiesPanel()"
+        (toggleProperties)="togglePropertiesPanel()"
+        [propertiesVisible]="showPropertiesPanel()"
       />
 
-      <!-- Infinite page surface — scrolls as one -->
-      <div class="doc-surface">
-        <div class="doc-surface-inner">
+      <div class="editor-layout">
+        <!-- Infinite page surface — scrolls as one -->
+        <div class="doc-surface">
+          <div class="doc-surface-inner">
           <!-- Title inline — part of the document, not a separate input -->
           <div
             #titleEl
@@ -75,12 +86,21 @@ import { showError, showInfo } from '../../utils/message-utils';
           ></div>
 
           <!-- Editor flows naturally after the title -->
-            <app-editor
+            <app-milkdown-editor
             [initialContent]="contenido()"
+            [documentId]="docId"
             (contentChange)="onContentChange($event)"
             (referenceOpen)="openReference($event)"
           />
+          </div>
         </div>
+        @if (showPropertiesPanel()) {
+          <app-properties-panel
+            [markdown]="contenido()"
+            (markdownChange)="onContentChange($event)"
+            (close)="showPropertiesPanel.set(false)"
+          />
+        }
       </div>
 
       </div>
@@ -123,7 +143,7 @@ export class DocEditorComponent {
   docId: string | null = null;
   titulo = '';
   espacioId = '';
-  contenido = signal('');
+  contenido = signal(NEW_DOCUMENT_CONTENT);
   saving = signal(false);
   creatingSpace = signal(false);
   espacios = signal<Espacio[]>([]);
@@ -131,6 +151,7 @@ export class DocEditorComponent {
   showNewSpace = signal(false);
   showImportDialog = signal(false);
   showMetadataDialog = signal(false);
+  showPropertiesPanel = signal(true);
   /** Loaded doc payload (null while loading or when creating a new doc). */
   currentDoc = signal<{ id: string; metadata: DocMetadata } | null>(null);
   /** Convenience computed — feeds the metadata dialog input. */
@@ -164,10 +185,10 @@ export class DocEditorComponent {
         this.docId = newId;
         if (this.docId) {
           this.loadDoc(this.docId);
-        } else {
-          // New doc mode - reset fields
-          this.titulo = '';
-          this.contenido.set('');
+          } else {
+            // New doc mode - reset fields
+            this.titulo = '';
+            this.contenido.set(NEW_DOCUMENT_CONTENT);
           this.savedSnapshot = { titulo: '', contenido: '' };
           this.setSaveStatus('idle');
           this.titleEl.nativeElement.innerText = '';
@@ -441,17 +462,17 @@ export class DocEditorComponent {
     this.showImportDialog.set(true);
   }
 
-  /**
-   * Open the metadata dialog (triggered from the toolbar).
-   *
-   * Guard: we only open when a doc is currently loaded. In "new doc" mode
-   * there's no metadata to show — opening would just flash 9 em-dash rows,
-   * which is information the user already has (no doc loaded yet).
-   * The toolbar's disabled state covers the "no editor" case.
-   */
+  /** Open the editable properties panel (triggered from the toolbar). */
   openMetadataDialog(): void {
-    if (this.currentDoc() === null) return;
-    this.showMetadataDialog.set(true);
+    this.openPropertiesPanel();
+  }
+
+  openPropertiesPanel(): void {
+    if (this.currentDoc() !== null || this.contenido().trim()) this.showPropertiesPanel.set(true);
+  }
+
+  togglePropertiesPanel(): void {
+    this.showPropertiesPanel.update((visible) => !visible);
   }
 
   /**

@@ -1,0 +1,94 @@
+:host {
+  display: block;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-inline: calc(-1 * var(--doc-page-inline-padding, 0px));
+  width: calc(100% + (2 * var(--doc-page-inline-padding, 0px)));
+}
+
+.milkdown-page {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100%;
+  height: 100%;
+  color: var(--tt-text, #111827);
+  background: var(--tt-page-bg, #ffffff);
+}
+
+.milkdown-content {
+  box-sizing: border-box;
+  min-height: 100%;
+  width: 100%;
+  outline: none;
+}
+
+.milkdown-page.disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+:host ::ng-deep .milkdown {
+  position: relative;
+  box-sizing: border-box;
+  min-height: 100%;
+  height: 100%;
+  width: 100%;
+  padding: 0.5rem 0;
+  color: var(--tt-text, #111827);
+  background: var(--tt-page-bg, #ffffff);
+  --crepe-color-background: var(--tt-page-bg, #ffffff);
+  --crepe-color-on-background: var(--tt-text, #111827);
+  --crepe-color-surface: var(--tt-surface, #f8fafd);
+  --crepe-color-surface-low: var(--tt-surface-low, #f3f4f6);
+  --crepe-color-on-surface: var(--tt-text, #111827);
+  --crepe-color-on-surface-variant: var(--tt-text-secondary, #374151);
+  --crepe-color-outline: var(--tt-text-muted, #9ca3af);
+  --crepe-color-primary: var(--tt-primary, #144373);
+  --crepe-color-hover: var(--tt-btn-hover-bg, #f3f4f6);
+  --crepe-color-selected: var(--tt-btn-active-bg, #e5e7eb);
+}
+
+// Crepe renders the official floating toolbar as an absolutely positioned
+// child of the editor. Keep it above the page surface and explicitly clickable
+// without changing the editor's document geometry.
+:host ::ng-deep .milkdown .milkdown-toolbar {
+  z-index: 100;
+  pointer-events: auto;
+}
+
+:host ::ng-deep .milkdown .milkdown-toolbar .toolbar-item {
+  position: relative;
+  z-index: 101;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+:host ::ng-deep .milkdown .ProseMirror {
+  ::selection,
+  *::selection { background: color-mix(in srgb, var(--tt-primary) 30%, transparent) !important; }
+}
+
+:host ::ng-deep .milkdown .ProseMirror {
+  width: 100%;
+  max-width: none;
+  color: var(--tt-text, #111827);
+  caret-color: currentColor;
+}
+
+:host ::ng-deep .gem-mention-label,
+:host ::ng-deep .gem-mention-label-user,
+:host ::ng-deep .gem-mention-label-event,
+:host ::ng-deep .gem-mention-label-page {
+  display: inline-block;
+  padding: 2px 6px;
+  line-height: 1.4;
+  color: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+:host ::ng-deep .gem-mention-source {
+  display: none;
+}
