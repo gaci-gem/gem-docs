@@ -6,6 +6,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.2.0',
+    date: '2026-09-30',
+    changes: [
+      'Incorporamos un editor Milkdown con barra de herramientas para trabajar con documentos con mayor comodidad.',
+      'Ahora podés administrar las propiedades de los documentos y revisar sugerencias de edición.',
+      'Mejoramos la navegación de la bóveda para encontrar y organizar documentos con mayor facilidad.',
+      'Sumamos soporte para Markdown y frontmatter, junto con opciones de importación y exportación.',
+      'Agregamos mejoras en las pruebas E2E y en la cobertura de testing para una experiencia más confiable.',
+    ],
+  },
+  {
     version: '0.1.0',
     date: '2026-09-20',
     changes: [
