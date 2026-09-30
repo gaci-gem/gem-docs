@@ -31,8 +31,8 @@ export const filterSuggestionItems = (items: ReferenceSuggestionItem[], query: s
   return items.filter((item) => !normalized || `${item.label} ${item.description ?? ''}`.toLocaleLowerCase().includes(normalized)).slice(0, 8);
 };
 
-export const userSuggestionItems = (users: Usuario[]): ReferenceSuggestionItem[] => users.flatMap((user) => user.id ? [{ id: user.id, label: `@${`${user.nombre} ${user.apellido}`.trim() || user.usuario}`, description: `@${user.usuario}`, color: user.color || undefined }] : []);
-export const eventSuggestionItems = (events: Evento[]): ReferenceSuggestionItem[] => events.flatMap((event) => event.id ? [{ id: event.id, label: `#${event.titulo}`, description: `${event.tipoCodigo}-${String(event.numero).padStart(3, '0')}`, color: event.tipo?.color || undefined }] : []);
+export const userSuggestionItems = (users: Usuario[]): ReferenceSuggestionItem[] => users.flatMap((user) => user.id ? [{ id: user.id, label: `@${`${user.nombre} ${user.apellido}`.trim()}`, color: user.color || undefined }] : []);
+export const eventSuggestionItems = (events: Evento[]): ReferenceSuggestionItem[] => events.flatMap((event) => event.id ? [{ id: event.id, label: `#${event.tipoCodigo}-${event.numero} | ${event.titulo}`, color: event.tipo?.color || undefined }] : []);
 export const docSuggestionItems = (docs: Doc[]): ReferenceSuggestionItem[] => docs.map((doc) => ({ id: doc.id, label: doc.titulo }));
 
 type ItemLoader = () => ReferenceSuggestionItem[];

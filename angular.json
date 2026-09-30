@@ -32,7 +32,20 @@
               }
             ],
             "styles": [
-              "src/styles.scss"
+              "src/styles.scss",
+              "@milkdown/crepe/theme/nord.css",
+              "@milkdown/crepe/theme/common/reset.css",
+              "@milkdown/crepe/theme/common/style.css",
+              "@milkdown/crepe/theme/common/block-edit.css",
+              "@milkdown/crepe/theme/common/cursor.css",
+              "@milkdown/crepe/theme/common/image-block.css",
+              "@milkdown/crepe/theme/common/latex.css",
+              "@milkdown/crepe/theme/common/link-tooltip.css",
+              "@milkdown/crepe/theme/common/list-item.css",
+              "@milkdown/crepe/theme/common/placeholder.css",
+              "@milkdown/crepe/theme/common/prosemirror.css",
+              "@milkdown/crepe/theme/common/table.css",
+              "@milkdown/crepe/theme/common/toolbar.css"
             ],
             "polyfills": [
               "@angular/localize/init"

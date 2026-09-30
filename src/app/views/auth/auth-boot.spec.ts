@@ -30,42 +30,16 @@ import { AuthLogoutListener } from '@core/auth/listen-logout';
 import { AuthService } from '@core/services/auth';
 import { UserStorageService } from '@core/services/user-storage';
 import { environment as envModule } from '@/environments/environment';
+import { ensureBrowserStorage } from '@/testing/browser-storage';
+import { Observable } from 'rxjs';
 
 // ---------------------------------------------------------------------------
 // localStorage / sessionStorage polyfills. The gem-docs Vitest+@angular/build
 // configuration does NOT initialize these globals; we install Map-backed
 // stores here once per spec file.
 // ---------------------------------------------------------------------------
-const buildMemoryStore = () => {
-  const store = new Map<string, string>();
-  return {
-    getItem: (k: string): string | null => (store.has(k) ? store.get(k)! : null),
-    setItem: (k: string, v: string): void => {
-      store.set(k, v);
-    },
-    removeItem: (k: string): void => {
-      store.delete(k);
-    },
-    clear: (): void => {
-      store.clear();
-    },
-    key: (i: number): string | null => Array.from(store.keys())[i] ?? null,
-    get length(): number {
-      return store.size;
-    },
-  };
-};
-const ensureGlobal = (key: 'localStorage' | 'sessionStorage') => {
-  if (typeof (globalThis as unknown as Record<string, unknown>)[key] === 'undefined') {
-    Object.defineProperty(globalThis, key, {
-      value: buildMemoryStore(),
-      configurable: true,
-      writable: true,
-    });
-  }
-};
-ensureGlobal('localStorage');
-ensureGlobal('sessionStorage');
+ensureBrowserStorage('localStorage');
+ensureBrowserStorage('sessionStorage');
 
 // Patch jsdom's history.replaceState — it throws "Not implemented" unless
 // the URL change is a hash change. AuthBoot uses replaceState to strip
@@ -104,6 +78,7 @@ describe('AuthBoot + AuthLogoutListener — REQ-cookie-aware-boot + REQ-logout-a
   let boot: AuthBoot;
 
   beforeEach(() => {
+    window.history.replaceState(null, '', '/');
     localStorage.clear();
     sessionStorage.clear();
 
@@ -130,9 +105,10 @@ describe('AuthBoot + AuthLogoutListener — REQ-cookie-aware-boot + REQ-logout-a
 
   it('S1: test env + no cookie + 401 -> commitRedirect with login URL + encoded returnUrl', () => {
     configure({ useCookieAuth: true, loginUrl: 'https://gem-web.julitorossian.dev/auth/sign-in' });
-    const commit = vi.spyOn(boot, 'commitRedirect');
+    const commit = vi.spyOn(boot, 'commitRedirect').mockImplementation(() => undefined);
 
-    boot.run();
+    const result = boot.run();
+    if (result instanceof Observable) result.subscribe();
 
     const req = httpMock.expectOne(`${envModule.API_URL}/auth/profile`);
     expect(req.request.withCredentials).toBe(true);
@@ -147,9 +123,10 @@ describe('AuthBoot + AuthLogoutListener — REQ-cookie-aware-boot + REQ-logout-a
 
   it('S2: test env + probe 200 hydrates the user and does NOT trigger redirect', () => {
     configure({ useCookieAuth: true });
-    const commit = vi.spyOn(boot, 'commitRedirect');
+    const commit = vi.spyOn(boot, 'commitRedirect').mockImplementation(() => undefined);
 
-    boot.run();
+    const result = boot.run();
+    if (result instanceof Observable) result.subscribe();
 
     const req = httpMock.expectOne(`${envModule.API_URL}/auth/profile`);
     expect(req.request.withCredentials).toBe(true);
@@ -166,9 +143,10 @@ describe('AuthBoot + AuthLogoutListener — REQ-cookie-aware-boot + REQ-logout-a
   it('S3: dev env + ?token= consumes URL token into sessionStorage, strips URL, no probe', () => {
     configure({ useCookieAuth: false });
     window.history.replaceState(null, '', '/?token=jwt.test.url.token');
-    const commit = vi.spyOn(boot, 'commitRedirect');
+    const commit = vi.spyOn(boot, 'commitRedirect').mockImplementation(() => undefined);
 
-    boot.run();
+    const result = boot.run();
+    if (result instanceof Observable) result.subscribe();
 
     // No HTTP probe is fired — the URL-token handover preempts the probe.
     httpMock.expectNone(() => true);
@@ -184,9 +162,10 @@ describe('AuthBoot + AuthLogoutListener — REQ-cookie-aware-boot + REQ-logout-a
       useCookieAuth: false,
       loginUrl: 'https://gem-web.julitorossian.dev/auth/sign-in',
     });
-    const commit = vi.spyOn(boot, 'commitRedirect');
+    const commit = vi.spyOn(boot, 'commitRedirect').mockImplementation(() => undefined);
 
-    boot.run();
+    const result = boot.run();
+    if (result instanceof Observable) result.subscribe();
 
     const req = httpMock.expectOne(`${envModule.API_URL}/auth/profile`);
     expect(req.request.withCredentials).toBe(true);

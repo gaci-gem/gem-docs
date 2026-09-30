@@ -10,6 +10,7 @@ import { DocExportService } from '@core/services/doc-export.service';
 import { ToolbarService } from '../../components/toolbar/toolbar.service';
 import { UsuarioService } from '@core/services/usuario';
 import { EventoService } from '@core/services/evento.service';
+import { ImageUploadService } from '@core/services/image-upload.service';
 
 describe('DocEditorComponent save flow', () => {
   let fixture: ComponentFixture<DocEditorComponent>;
@@ -18,13 +19,15 @@ describe('DocEditorComponent save flow', () => {
     create: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
     getById: ReturnType<typeof vi.fn>;
+    list: ReturnType<typeof vi.fn>;
     notifyChanges: ReturnType<typeof vi.fn>;
   };
   let request: Subject<{ id: string; metadata: Record<string, never> }>;
 
   beforeEach(async () => {
-    docService = { create: vi.fn(), update: vi.fn(), getById: vi.fn(), notifyChanges: vi.fn() };
+    docService = { create: vi.fn(), update: vi.fn(), getById: vi.fn(), list: vi.fn(), notifyChanges: vi.fn() };
     docService.getById.mockReturnValue(of(undefined));
+    docService.list.mockReturnValue(of([]));
     docService.create.mockImplementation(() => request.asObservable());
     docService.update.mockReturnValue(of(undefined));
     request = new Subject();
@@ -33,7 +36,10 @@ describe('DocEditorComponent save flow', () => {
     espacioService.list.mockReturnValue(of([]));
     espacioService.getById.mockReturnValue(of({ nombre: 'Espacio' }));
     const usuarioService = { getAll: vi.fn().mockReturnValue(of([])) };
-    const eventoService = { list: vi.fn().mockReturnValue(of([])) };
+    const eventoService = {
+      list: vi.fn().mockReturnValue(of([])),
+      listComplete: vi.fn().mockReturnValue(of([])),
+    };
 
     await TestBed.configureTestingModule({
       imports: [DocEditorComponent],
@@ -44,6 +50,7 @@ describe('DocEditorComponent save flow', () => {
         { provide: EventoService, useValue: eventoService },
         { provide: AuthService, useValue: { currentUser$: of(null) } },
         { provide: DocExportService, useValue: { exportDocx: vi.fn(), exportPdf: vi.fn() } },
+        { provide: ImageUploadService, useValue: { uploadBase64: vi.fn() } },
         { provide: Router, useValue: { navigate: vi.fn(), events: of() } },
         { provide: ActivatedRoute, useValue: {
           paramMap: of(convertToParamMap({})),
@@ -60,12 +67,40 @@ describe('DocEditorComponent save flow', () => {
     component.espacioId = 'space-1';
     component.contenido.set('Contenido');
     fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-milkdown-editor')).not.toBeNull();
   });
 
   it('marks title edits as dirty', () => {
     component.onTitleInput({ target: { innerText: 'Título editado' } } as unknown as Event);
 
     expect(TestBed.inject(ToolbarService).saveStatus()).toBe('dirty');
+  });
+
+  it('routes replace and append imports through content change handling', async () => {
+    component.docId = 'doc-1';
+    component.showImportDialog.set(true);
+    await component.onImportConfirm({ markdown: '[[evento:new]]', suggestedTitle: 'Imported', mode: 'replace', imagesBase64: [] });
+
+    expect(component.showImportDialog()).toBe(false);
+    expect(component.titulo).toBe('Imported');
+    expect(component.contenido()).toBe('[[evento:new]]');
+    expect(component.detectedLinks()).toEqual(['[[evento:new]]']);
+    expect(TestBed.inject(ToolbarService).saveStatus()).toBe('dirty');
+
+    await component.onImportConfirm({ markdown: 'More', suggestedTitle: 'Ignored', mode: 'append', imagesBase64: [] });
+    expect(component.titulo).toBe('Imported');
+    expect(component.contenido()).toBe('[[evento:new]]\n\n---\n\nMore');
+  });
+
+  it('changes view mode and falls back to code after Mermaid render failure', () => {
+    component.setViewMode('graph');
+    component.onMermaidRenderStatus(false);
+    expect(component.viewMode()).toBe('code');
+
+    component.setViewMode('both');
+    component.onMermaidRenderStatus(false);
+    expect(component.viewMode()).toBe('both');
   });
 
   it('serializes a new-document save and uses the returned id for the next save', async () => {

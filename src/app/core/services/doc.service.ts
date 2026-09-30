@@ -18,36 +18,47 @@ export class DocService {
     this.changes$.next();
   }
 
-  list(options?: { silent?: boolean }): Observable<Doc[]> {
+  list(options?: { silent?: boolean; vaultId?: string }): Observable<Doc[]> {
     const headers = options?.silent ? { 'X-No-Loading': 'true' } : undefined;
-    return this.http.get<Doc[]>(this.apiUrl, { headers });
+    let params = new HttpParams();
+    if (options?.vaultId) params = params.set('vaultId', options.vaultId);
+    return this.http.get<Doc[]>(this.apiUrl, { headers, params });
   }
 
-  getById(id: string): Observable<DocWithContent> {
-    return this.http.get<DocWithContent>(`${this.apiUrl}/${id}`);
+  getById(id: string, vaultId?: string): Observable<DocWithContent> {
+    let params = new HttpParams();
+    if (vaultId) params = params.set('vaultId', vaultId);
+    return this.http.get<DocWithContent>(`${this.apiUrl}/${id}`, { params });
   }
 
-  getByEspacio(espacioId: string): Observable<Doc[]> {
-    const params = new HttpParams().set('espacioId', espacioId);
-    return this.http.get<Doc[]>(`${this.apiUrl}/espacio/${espacioId}`);
+  getByEspacio(espacioId: string, vaultId?: string): Observable<Doc[]> {
+    let params = new HttpParams().set('espacioId', espacioId);
+    if (vaultId) params = params.set('vaultId', vaultId);
+    return this.http.get<Doc[]>(`${this.apiUrl}/espacio/${espacioId}`, { params });
   }
 
   getBacklinks(eventoId: string): Observable<Doc[]> {
     return this.http.get<Doc[]>(`${this.apiUrl}/evento/${eventoId}`);
   }
 
-  create(doc: DocCreate, options?: { silent?: boolean }): Observable<DocWithContent> {
+  create(doc: DocCreate, options?: { silent?: boolean; vaultId?: string }): Observable<DocWithContent> {
     const headers = options?.silent ? { 'X-No-Loading': 'true' } : undefined;
-    return this.http.post<DocWithContent>(this.apiUrl, doc, { headers });
+    let params = new HttpParams();
+    if (options?.vaultId) params = params.set('vaultId', options.vaultId);
+    return this.http.post<DocWithContent>(this.apiUrl, doc, { headers, params });
   }
 
-  update(id: string, doc: DocUpdate, options?: { silent?: boolean }): Observable<DocWithContent> {
+  update(id: string, doc: DocUpdate, options?: { silent?: boolean; vaultId?: string }): Observable<DocWithContent> {
     const headers = options?.silent ? { 'X-No-Loading': 'true' } : undefined;
-    return this.http.put<DocWithContent>(`${this.apiUrl}/${id}`, doc, { headers });
+    let params = new HttpParams();
+    if (options?.vaultId) params = params.set('vaultId', options.vaultId);
+    return this.http.put<DocWithContent>(`${this.apiUrl}/${id}`, doc, { headers, params });
   }
 
-  delete(id: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  delete(id: string, vaultId?: string): Observable<void> {
+    let params = new HttpParams();
+    if (vaultId) params = params.set('vaultId', vaultId);
+    return this.http.delete<void>(`${this.apiUrl}/${id}`, { params });
   }
 
   getLinks(docId: string): Observable<DocLink[]> {

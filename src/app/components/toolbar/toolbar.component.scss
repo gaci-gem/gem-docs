@@ -184,6 +184,21 @@
   }
 }
 
+.btn-properties {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--tt-border, #e5e7eb);
+  border-radius: 6px;
+  background: var(--tt-surface, #fff);
+  color: var(--tt-btn-default-icon, #4b5563);
+  cursor: pointer;
+}
+
+.btn-properties:hover { background: var(--tt-btn-hover-bg, rgba(0, 0, 0, .04)); }
+
 // -----------------------------------------------------------------------------
 // Save Status Indicator
 // -----------------------------------------------------------------------------
