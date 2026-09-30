@@ -17,8 +17,9 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { Crepe } from '@milkdown/crepe';
 import type { ReferenceTarget } from '@core/services/reference-drawer.service';
 import { ImageUploadService } from '@core/services/image-upload.service';
+import type { ExportReferenceCatalogEntry } from '@core/services/doc-export.service';
 import { composeFrontmatter, splitFrontmatter } from '@core/markdown/frontmatter';
-import { firstValueFrom } from 'rxjs';
+import { catchError, firstValueFrom, forkJoin, of } from 'rxjs';
 import { mentionPlugin, MentionItem } from './mention-plugin';
 import { UsuarioService } from '@core/services/usuario';
 import { EventoService } from '@core/services/evento.service';
@@ -30,6 +31,8 @@ import { commandsCtx, editorViewCtx } from '@milkdown/core';
 import { insertHrCommand, toggleEmphasisCommand, toggleInlineCodeCommand, toggleStrongCommand, updateLinkCommand, wrapInBlockquoteCommand, wrapInBulletListCommand, wrapInHeadingCommand, wrapInOrderedListCommand } from '@milkdown/preset-commonmark';
 import { insertTableCommand, setAlignCommand, toggleStrikethroughCommand } from '@milkdown/preset-gfm';
 import { redoCommand, undoCommand } from '@milkdown/plugin-history';
+import { createMermaidCodeBlockView, type ViewMode } from './mermaid-code-block';
+import { googlePreviewPlugin } from './google-preview-plugin';
 
 export interface MilkdownConfig {
   placeholder?: string;
@@ -58,12 +61,11 @@ export interface MilkdownConfig {
 /**
  * Small Angular adapter around Crepe for the first gem-docs integration.
  *
- * The contract is Markdown-in/Markdown-out. Frontmatter, Mermaid, embeds,
- * interactive links, and GEM reference nodes are intentionally not configured
- * here. Until those capabilities have an explicit Milkdown implementation,
- * referenceOpen remains part of the compatibility contract but emits nothing.
- * Unsupported Markdown may be normalized by Crepe after the first edit; this
- * adapter does not silently claim a lossless round-trip.
+ * The contract is Markdown-in/Markdown-out. Frontmatter is preserved around
+ * the editable body, while Mermaid, image uploads, Google previews, mentions,
+ * and GEM reference events are integrated through focused plugins and outputs.
+ * Unsupported Markdown may still be normalized by Crepe after the first edit;
+ * this adapter does not silently claim a lossless round-trip for unknown syntax.
  */
 @Component({
   selector: 'app-milkdown-editor',
@@ -76,7 +78,7 @@ export interface MilkdownConfig {
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="milkdown-page" [class.disabled]="effectiveDisabled()">
+    <div class="milkdown-page" [class.disabled]="effectiveDisabled()" [attr.data-view-mode]="viewMode()">
       <div #editorRef class="milkdown-content" role="textbox" aria-multiline="true"></div>
     </div>
   `,
@@ -98,22 +100,25 @@ export class MilkdownEditorComponent implements AfterViewInit, ControlValueAcces
   readonly initialContent = input('');
   /** Existing document ID. New documents use the legacy global asset path until saved. */
   readonly documentId = input<string | null>(null);
+  readonly viewMode = input<ViewMode>('both');
 
   readonly contentChange = output<string>();
   readonly ready = output<void>();
   readonly focusEvent = output<void>();
   readonly blurEvent = output<void>();
   readonly referenceOpen = output<Exclude<ReferenceTarget, null>>();
+  readonly mermaidRenderStatus = output<boolean>();
 
   private readonly cvaDisabled = signal(false);
   private crepe?: Crepe;
-  private currentContent = '';
+  currentContent = '';
   private frontmatterPrefix = '';
   private initialized = false;
   private onChange = (_value: string) => {};
   private onTouched = () => {};
   private mentionItems: MentionItem[] = [];
   private mentionItemsVersion = 0;
+  private mentionItemsPromise?: Promise<void>;
   private toolbarMouseDown?: (event: MouseEvent) => void;
 
   protected readonly effectiveDisabled = computed(() => this.disabled() || this.cvaDisabled());
@@ -217,12 +222,14 @@ export class MilkdownEditorComponent implements AfterViewInit, ControlValueAcces
       if (item.kind === 'page') void this.router.navigate(['/docs', item.id]);
       else this.referenceOpen.emit({ type: item.kind, id: item.id });
     }, () => this.mentionItemsVersion));
+    this.crepe.editor.use(createMermaidCodeBlockView(() => this.mermaidRenderStatus.emit(true), () => this.mermaidRenderStatus.emit(false)));
+    this.crepe.editor.use(googlePreviewPlugin);
 
     await this.crepe.create();
     this.toolbarService.setEditor(this);
     this.installToolbarFocusGuard();
-    this.crepe.setReadonly(this.effectiveDisabled() || this.config().readonly === true);
-    this.crepe.on((listener) => {
+    this.crepe?.setReadonly?.(this.effectiveDisabled() || this.config().readonly === true);
+    this.crepe?.on?.((listener) => {
       listener.markdownUpdated(() => {
         this.toolbarService.refresh();
         const markdown = this.crepe?.getMarkdown() ?? this.currentContent;
@@ -243,19 +250,27 @@ export class MilkdownEditorComponent implements AfterViewInit, ControlValueAcces
     this.ready.emit();
   }
 
-  private loadMentionItems(): void {
-    this.usuarioService.getAll(FiltroActivo.ALL).subscribe((users) => {
-      this.mentionItems = [...this.mentionItems.filter((item) => item.kind !== 'user'), ...users.flatMap((user) => user.id ? [{ id: user.id, label: `@${user.nombre} ${user.apellido}`, kind: 'user' as const }] : [])];
-      this.mentionItemsVersion++;
-    });
-    this.eventoService.listComplete({ cerrado: FiltroActivo.ALL }).subscribe((events) => {
-      this.mentionItems = [...this.mentionItems.filter((item) => item.kind !== 'event'), ...events.flatMap((event) => event.id ? [{ id: event.id, label: `#${event.tipoCodigo ?? event.tipo?.codigo ?? ''}-${event.numero ?? ''} | ${event.titulo ?? ''}`, kind: 'event' as const }] : [])];
-      this.mentionItemsVersion++;
-    });
-    this.docService.list({ silent: true }).subscribe((docs) => {
-      this.mentionItems = [...this.mentionItems.filter((item) => item.kind !== 'page'), ...docs.map((doc) => ({ id: doc.id, label: doc.titulo, kind: 'page' as const }))];
-      this.mentionItemsVersion++;
-    });
+  private loadMentionItems(): Promise<void> {
+    if (!this.mentionItemsPromise) {
+      this.mentionItemsPromise = firstValueFrom(forkJoin({
+        users: this.usuarioService.getAll(FiltroActivo.ALL).pipe(catchError(() => of([]))),
+        events: this.eventoService.listComplete({ cerrado: FiltroActivo.ALL }).pipe(catchError(() => of([]))),
+        docs: this.docService.list({ silent: true }).pipe(catchError(() => of([]))),
+      })).then(({ users, events, docs }) => {
+        this.mentionItems = [
+          ...users.flatMap((user) => user.id ? [{ id: user.id, label: `@${user.nombre} ${user.apellido}`, kind: 'user' as const }] : []),
+          ...events.flatMap((event) => event.id ? [{ id: event.id, label: `#${event.tipoCodigo ?? event.tipo?.codigo ?? ''}-${event.numero ?? ''} | ${event.titulo ?? ''}`, kind: 'event' as const }] : []),
+          ...docs.map((doc) => ({ id: doc.id, label: doc.titulo, kind: 'page' as const })),
+        ];
+        this.mentionItemsVersion++;
+      });
+    }
+    return this.mentionItemsPromise;
+  }
+
+  async getExportReferenceCatalog(): Promise<ExportReferenceCatalogEntry[]> {
+    await this.loadMentionItems();
+    return this.mentionItems.map(({ id, label, kind }) => ({ id, label, kind }));
   }
 
   private async uploadImage(file: File): Promise<string> {

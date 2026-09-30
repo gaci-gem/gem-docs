@@ -9,6 +9,7 @@ import { MenuItem, ConfirmationService, MessageService } from 'primeng/api';
 import { NgIcon } from '@ng-icons/core';
 import { DocService } from '@core/services/doc.service';
 import { EspacioService } from '@core/services/espacio.service';
+import { VaultService } from '@core/services/vault.service';
 import { Doc } from '@core/interfaces/doc';
 import { Espacio } from '@core/interfaces/espacio';
 import { showError, showSuccess } from '../../utils/message-utils';
@@ -202,6 +203,7 @@ import { showError, showSuccess } from '../../utils/message-utils';
 export class DocsListComponent implements OnInit {
   private docService = inject(DocService);
   private espacioService = inject(EspacioService);
+  private vaultService = inject(VaultService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private confirmationService = inject(ConfirmationService);
@@ -292,11 +294,12 @@ export class DocsListComponent implements OnInit {
     this.newSubEspacioNombre = '';
 
     const id = this.espacioId();
+    const vaultId = this.vaultService.active()?.id;
 
     if (id) {
       // Inside a space: load the space (with children), the docs in it, and
       // the full espacios list (used for breadcrumb walking).
-      this.espacioService.getById(id).subscribe({
+      this.espacioService.getById(id, vaultId).subscribe({
         next: (esp) => {
           this.currentEspacio.set(esp);
           this.subEspacios.set(esp.children ?? []);
@@ -308,13 +311,13 @@ export class DocsListComponent implements OnInit {
           this.loading.set(false);
         },
       });
-      this.docService.getByEspacio(id).subscribe({
+      this.docService.getByEspacio(id, vaultId).subscribe({
         next: (docs) => { this.docs.set(docs); },
         error: () => showError(this.messageService, 'Error', 'No se pudieron cargar los documentos'),
       });
     } else {
       // Root listing: show all docs.
-      this.docService.list().subscribe({
+      this.docService.list({ vaultId }).subscribe({
         next: (docs) => { this.docs.set(docs); this.loading.set(false); },
         error: () => { this.loading.set(false); showError(this.messageService, 'Error', 'No se pudieron cargar los documentos'); },
       });
@@ -322,7 +325,7 @@ export class DocsListComponent implements OnInit {
   }
 
   private refreshAllEspaciosCache(): void {
-    this.espacioService.list({ silent: true }).subscribe({
+    this.espacioService.list({ silent: true, vaultId: this.vaultService.active()?.id }).subscribe({
       next: (espacios) => this.allEspacios.set(espacios),
     });
   }
@@ -359,7 +362,7 @@ export class DocsListComponent implements OnInit {
       rejectLabel: 'Cancelar',
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
-        this.docService.delete(docId).subscribe({
+        this.docService.delete(docId, this.vaultService.active()?.id).subscribe({
           next: () => {
             this.docs.update((list) => list.filter((d) => d.id !== docId));
             showSuccess(this.messageService, 'Eliminado', 'Documento eliminado');
@@ -383,7 +386,7 @@ export class DocsListComponent implements OnInit {
       rejectLabel: 'Cancelar',
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
-        this.espacioService.delete(espacioId).subscribe({
+        this.espacioService.delete(espacioId, this.vaultService.active()?.id).subscribe({
           next: () => {
             this.subEspacios.update((list) => list.filter((e) => e.id !== espacioId));
             this.refreshAllEspaciosCache();

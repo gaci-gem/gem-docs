@@ -1,35 +1,101 @@
-<aside class="properties-panel" aria-label="Propiedades">
+  <aside class="properties-panel" [style.width.px]="panelWidth()" aria-labelledby="properties-title">
+    <div class="resize-handle" role="separator" tabindex="0" aria-label="Ajustar ancho del panel" aria-orientation="vertical" (pointerdown)="startResize($event)" (keydown)="resizeByKeyboard($event)"></div>
   <header class="properties-header">
-    <h2>Propiedades</h2>
+    <div>
+      <h2 id="properties-title">Propiedades</h2>
+    </div>
     <button type="button" class="icon-button" aria-label="Ocultar propiedades" title="Ocultar propiedades" (click)="close.emit()">×</button>
   </header>
 
-  <section class="property-section" aria-label="Estado editorial">
+  <section class="property-section" aria-label="Propiedades editoriales">
     @for (row of rows(); track row.key) {
       @if (row.editorial) {
-        <label class="property-row">
-          <span>{{ row.key }}</span>
-          <input [formControl]="controlFor(row.key)" [attr.aria-label]="row.key" (blur)="updateProperty(row.key)" />
-          <button type="button" class="remove-button" [attr.aria-label]="'Eliminar ' + row.key" (click)="removeProperty(row.key)">×</button>
-        </label>
+        <div class="property-row">
+          <label [for]="'property-' + row.key">{{ row.key === 'tipo' ? 'Tipo' : 'Estado' }}</label>
+           @if (row.key === 'estado') {
+             <select [id]="'property-' + row.key" [formControl]="controlFor(row.key)" [attr.aria-label]="row.key === 'estado' ? 'Estado editorial' : 'Tipo de documento'" (change)="updateProperty(row.key)">
+               @for (status of editorialStatuses; track status) {
+                 <option [value]="status">{{ status }}</option>
+               }
+             </select>
+           } @else {
+            <input [id]="'property-' + row.key" [formControl]="controlFor(row.key)" [attr.aria-label]="'Tipo de documento'" placeholder="Ej. Guía" (blur)="updateProperty(row.key)" />
+            }
+        </div>
       }
     }
   </section>
 
-  <section class="property-section" aria-label="Otras propiedades">
+  <section class="property-section" aria-labelledby="custom-title">
+    <h3 id="custom-title" class="visually-hidden">Propiedades personalizadas</h3>
     @for (row of rows(); track row.key) {
       @if (!row.editorial) {
-        <label class="property-row">
-          <span>{{ row.key }}</span>
-          <input [formControl]="controlFor(row.key)" [attr.aria-label]="row.key" (blur)="updateProperty(row.key)" />
-          <button type="button" class="remove-button" [attr.aria-label]="'Eliminar ' + row.key" (click)="removeProperty(row.key)">×</button>
-        </label>
+         <div class="property-row">
+            <div class="type-control">
+              <button type="button" class="type-button" [attr.data-type-button]="row.key" [attr.aria-label]="'Cambiar tipo de ' + row.key" [attr.aria-expanded]="openTypeMenu() === row.key" aria-haspopup="menu" (click)="toggleTypeMenu(row.key)">
+                  <span aria-hidden="true">{{ row.type === 'list' ? '☷' : row.type === 'select' ? '▾' : row.type === 'number' ? '#' : row.type === 'checkbox' ? '☑' : row.type === 'date' ? '◷' : 'T' }}</span>
+              </button>
+              @if (openTypeMenu() === row.key) {
+                <div class="type-menu" role="menu" [attr.aria-label]="'Tipos para ' + row.key">
+                  <div class="type-menu-heading">Tipo de propiedad</div>
+                   <button type="button" role="menuitemradio" [attr.aria-checked]="row.type === 'text'" (click)="changePropertyType(row, 'text')"><span aria-hidden="true">T</span> Texto</button>
+                    <button type="button" role="menuitemradio" [attr.aria-checked]="row.type === 'list'" (click)="changePropertyType(row, 'list')"><span aria-hidden="true">☷</span> Lista</button>
+                    <button type="button" role="menuitemradio" [attr.aria-checked]="row.type === 'select'" (click)="changePropertyType(row, 'select')"><span aria-hidden="true">▾</span> Selección</button>
+                   <button type="button" role="menuitemradio" [attr.aria-checked]="row.type === 'number'" (click)="changePropertyType(row, 'number')"><span aria-hidden="true">#</span> Número</button>
+                   <button type="button" role="menuitemradio" [attr.aria-checked]="row.type === 'checkbox'" (click)="changePropertyType(row, 'checkbox')"><span aria-hidden="true">☑</span> Casilla</button>
+                   <button type="button" role="menuitemradio" [attr.aria-checked]="row.type === 'date'" (click)="changePropertyType(row, 'date')"><span aria-hidden="true">◷</span> Fecha</button>
+                  <div class="type-menu-divider" aria-hidden="true"></div>
+                  <button type="button" class="delete-menu-item" role="menuitem" (click)="removeProperty(row.key)"><span aria-hidden="true">×</span> Eliminar propiedad</button>
+                </div>
+              }
+            </div>
+             <input class="property-key" [attr.data-key-input]="row.key" [formControl]="keyInputFor(row.key)" [attr.aria-label]="'Nombre de ' + row.key" (blur)="renameProperty(row)" />
+              @if (row.type === 'list') {
+                 <div class="list-editor select-editor" [attr.aria-label]="'Valores de ' + row.key">
+                 @for (value of row.values; track value; let index = $index) {
+                  <span class="token" [style]="chipStyle(row.key, value)">
+                   <span>{{ value }}</span><button type="button" class="token-remove" [attr.aria-label]="'Eliminar ' + value" (click)="removeListValue(row, index)">×</button>
+                 </span>
+                 }
+                   <input [formControl]="listInputFor(row.key)" [attr.aria-label]="'Agregar valores a ' + row.key" placeholder="Agregar valor…" role="combobox" aria-autocomplete="list" [attr.aria-expanded]="openSuggestions() === row.key" [attr.aria-controls]="'suggestions-' + row.key" (input)="updateSelectSuggestions(row.key)" (keydown.enter)="addListValues(row); $event.preventDefault()" (keydown)="selectSuggestionKeydown(row, $event)" />
+                   @if (openSuggestions() === row.key) {
+                     <div class="select-suggestions" [id]="'suggestions-' + row.key" role="listbox" [attr.aria-label]="'Sugerencias para ' + row.key">
+                       @for (suggestion of filteredSuggestions(row.key); track suggestion; let index = $index) {
+                         <button type="button" role="option" [attr.aria-selected]="index === selectedSuggestion()" [class.is-selected]="index === selectedSuggestion()" (mousedown)="$event.preventDefault()" (click)="addListSuggestion(row, suggestion)">{{ suggestion }}</button>
+                       }
+                       @if (!filteredSuggestions(row.key).length) { <span class="suggestions-empty">Sin resultados</span> }
+                     </div>
+                   }
+                  <button type="button" class="add-button inline-add" aria-label="Agregar valores" (click)="addListValues(row)">+</button>
+              </div>
+              } @else if (row.type === 'select') {
+                <div class="list-editor select-editor" [attr.aria-label]="'Seleccionar valor para ' + row.key">
+                  @if (row.value) {
+                     <span class="token" [style]="chipStyle(row.key, row.value)">
+                      <span>{{ row.value }}</span><button type="button" class="token-remove" [attr.aria-label]="'Eliminar ' + row.value" (click)="clearSelectValue(row)">×</button>
+                    </span>
+                  }
+                <input [id]="'property-' + row.key" [formControl]="listInputFor(row.key)" [attr.aria-label]="'Agregar valor a ' + row.key" placeholder="Agregar valor…" role="combobox" aria-autocomplete="list" [attr.aria-expanded]="openSuggestions() === row.key" [attr.aria-controls]="'suggestions-' + row.key" (input)="updateSelectSuggestions(row.key)" (change)="addSelectValue(row)" (keydown)="selectSuggestionKeydown(row, $event)" />
+                   @if (openSuggestions() === row.key) {
+                     <div class="select-suggestions" [id]="'suggestions-' + row.key" role="listbox" [attr.aria-label]="'Sugerencias para ' + row.key">
+                       @for (suggestion of filteredSuggestions(row.key); track suggestion; let index = $index) {
+                         <button type="button" role="option" [attr.aria-selected]="index === selectedSuggestion()" [class.is-selected]="index === selectedSuggestion()" (mousedown)="$event.preventDefault()" (click)="selectSuggestion(row, suggestion)">{{ suggestion }}</button>
+                       }
+                       @if (!filteredSuggestions(row.key).length) { <span class="suggestions-empty">Sin resultados</span> }
+                     </div>
+                   }
+                  <button type="button" class="add-button inline-add" aria-label="Confirmar valor" (click)="addSelectValue(row)">+</button>
+                </div>
+             } @else if (row.type === 'checkbox') {
+               <input type="checkbox" [id]="'property-' + row.key" [checked]="controlFor(row.key).value === 'true'" [attr.aria-label]="row.key" (change)="updateCheckbox(row.key, $event)" />
+            } @else {
+               <input [type]="row.type === 'number' ? 'number' : row.type === 'date' ? 'date' : 'text'" [id]="'property-' + row.key" [formControl]="controlFor(row.key)" [attr.aria-label]="row.key" placeholder="Escribí un valor" (blur)="updateProperty(row.key)" />
+           }
+         </div>
       }
     }
-    <div class="add-property">
-      <input [formControl]="newKey" aria-label="Nombre de propiedad" />
-      <input [formControl]="newValue" aria-label="Valor de propiedad" />
-      <button type="button" class="add-button" aria-label="Agregar propiedad" title="Agregar propiedad" (click)="addProperty()">+</button>
-    </div>
-  </section>
+    <button type="button" class="add-property" (click)="addProperty()">
+      <span aria-hidden="true">+</span> Agregar propiedad
+    </button>
+   </section>
 </aside>

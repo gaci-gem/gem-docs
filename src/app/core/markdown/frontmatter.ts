@@ -10,6 +10,63 @@ export interface SimpleFrontmatterProperty {
   value: string;
 }
 
+export type SimplePropertyType = 'text' | 'list' | 'select' | 'number' | 'checkbox' | 'date';
+
+/** Infers a type from its scalar representation, using a UI preference for empty values. */
+export function inferSimplePropertyType(value: string, preferredType?: SimplePropertyType): SimplePropertyType {
+  if (preferredType === 'select' || value.trim() === '' && preferredType) return preferredType;
+  if (parseStringList(value) !== null) return 'list';
+  if (value === 'true' || value === 'false') return 'checkbox';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`))) return 'date';
+  if (value.trim() !== '' && Number.isFinite(Number(value))) return 'number';
+  return 'text';
+}
+
+export function convertSimplePropertyValue(value: string, type: SimplePropertyType): string {
+  switch (type) {
+    case 'list': return serializeStringList(parseStringList(value) ?? value.split(',').map((item) => item.trim()).filter(Boolean));
+    case 'number': {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? String(parsed) : '';
+    }
+    case 'select': {
+      const values = parseStringList(value);
+      return (values?.[0] ?? value.split(',')[0] ?? '').trim();
+    }
+    case 'checkbox': return value === 'true' ? 'true' : 'false';
+    case 'date': return value.trim() === '' ? localIsoDate() : /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '';
+    default: return parseStringList(value) ? (parseStringList(value) ?? []).join(', ') : value;
+  }
+}
+
+function localIsoDate(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function parseStringList(value: string): string[] | null {
+  try {
+    const parsed: unknown = JSON.parse(value.trim());
+    return Array.isArray(parsed) && parsed.every((item) => typeof item === 'string') ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function serializeStringList(values: string[]): string {
+  return JSON.stringify(values.map((value) => value.trim()).filter(Boolean));
+}
+
+export const EDITORIAL_STATUSES = ['DRAFT', 'IN_REVIEW', 'PUBLISHED', 'ARCHIVED'] as const;
+export type EditorialStatus = typeof EDITORIAL_STATUSES[number];
+
+export function normalizeEditorialStatus(value: string | undefined): EditorialStatus {
+  return EDITORIAL_STATUSES.includes(value as EditorialStatus) ? value as EditorialStatus : 'DRAFT';
+}
+
 /**
  * Separates an initial, delimiter-only YAML block without interpreting its contents.
  *
@@ -67,6 +124,7 @@ export function parseSimpleFrontmatter(markdown: string): SimpleFrontmatterPrope
 export function updateSimpleFrontmatterProperty(markdown: string, key: string, value: string): string {
   const normalizedKey = key.trim();
   if (!/^[A-Za-z_][\w-]*$/.test(normalizedKey)) return markdown;
+  if (value.trim().startsWith('[') && !isStringList(value.trim())) return markdown;
 
   const parts = splitFrontmatter(markdown);
   if (!parts.prefix) {
@@ -109,9 +167,14 @@ function findSimplePropertyLine(lines: string[], key: string): number | undefine
 
 function isSupportedValue(value: string, nextLine: string | undefined): boolean {
   const trimmed = value.trim();
-  if (/^[\[\{>|&*!]/.test(trimmed)) return false;
+  if (/^[\{>|&*!]/.test(trimmed)) return false;
+  if (trimmed.startsWith('[') && !isStringList(trimmed)) return false;
   if (!trimmed && nextLine !== undefined && (/^\s+/.test(nextLine) || /^\s*-\s/.test(nextLine))) return false;
   return true;
+}
+
+function isStringList(value: string): boolean {
+  return parseStringList(value) !== null;
 }
 
 function lineEnd(markdown: string, start: number): { contentEnd: number; next: number } {

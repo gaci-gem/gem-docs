@@ -9,6 +9,7 @@
 
 .milkdown-page {
   box-sizing: border-box;
+  position: relative;
   width: 100%;
   min-height: 100%;
   height: 100%;
@@ -77,6 +78,97 @@
   caret-color: currentColor;
 }
 
+:host ::ng-deep .gem-mermaid-node {
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  border: 1px solid var(--tt-border, #e5e7eb);
+  border-radius: 0.5rem;
+  background: var(--tt-page-bg, #fff);
+}
+
+:host ::ng-deep .gem-mermaid-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.4rem;
+}
+
+:host ::ng-deep .gem-mermaid-mode-actions,
+:host ::ng-deep .gem-mermaid-export-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+:host ::ng-deep .gem-mermaid-actions button {
+  min-height: 2rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--tt-border, #e5e7eb);
+  border-radius: 0.25rem;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.8125rem;
+}
+
+:host ::ng-deep .gem-mermaid-actions .gem-mermaid-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0.35rem;
+}
+
+:host ::ng-deep .gem-mermaid-icon-button svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+:host ::ng-deep .gem-mermaid-icon-button svg text {
+  fill: currentColor;
+  stroke: none;
+  font-size: 5px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+:host ::ng-deep .gem-mermaid-node[data-mode='code'] .gem-mermaid-graph,
+:host ::ng-deep .gem-mermaid-node[data-mode='code'] .gem-mermaid-error { display: none; }
+:host ::ng-deep .gem-mermaid-node[data-mode='graph'] .gem-mermaid-source { display: none; }
+:host ::ng-deep .gem-mermaid-node[data-mode='both'] .gem-mermaid-source { display: block; }
+:host ::ng-deep .milkdown-page[data-view-mode='code'] .gem-mermaid-node .gem-mermaid-graph,
+:host ::ng-deep .milkdown-page[data-view-mode='code'] .gem-mermaid-node .gem-mermaid-error { display: none; }
+:host ::ng-deep .milkdown-page[data-view-mode='graph'] .gem-mermaid-node .gem-mermaid-source { display: none; }
+:host ::ng-deep .milkdown-page[data-view-mode='both'] .gem-mermaid-node .gem-mermaid-source { display: block; }
+:host ::ng-deep .gem-mermaid-source {
+  margin: 0;
+  padding: 0.5rem;
+  overflow: auto;
+  background: var(--tt-surface-low, #f3f4f6);
+  white-space: pre-wrap;
+}
+:host ::ng-deep .gem-mermaid-graph {
+  max-height: 34rem;
+  overflow: auto;
+  text-align: center;
+}
+:host ::ng-deep .gem-mermaid-graph svg {
+  display: inline-block;
+  width: auto;
+  max-width: 100%;
+  max-height: 32rem;
+  height: auto;
+}
+:host ::ng-deep .gem-mermaid-error { color: #9b1c1c; }
+
 :host ::ng-deep .gem-mention-label,
 :host ::ng-deep .gem-mention-label-user,
 :host ::ng-deep .gem-mention-label-event,
@@ -92,3 +184,91 @@
 :host ::ng-deep .gem-mention-source {
   display: none;
 }
+
+:host ::ng-deep .gem-google-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: min(100%, 28rem);
+  margin: 0.2rem 0;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--tt-border, #e5e7eb);
+  border-radius: 0.65rem;
+  background: var(--tt-surface-low, #f8fafd);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--tt-text, #111827) 8%, transparent);
+  color: var(--tt-text-secondary, #374151);
+  font-size: 0.8125rem;
+}
+
+:host ::ng-deep .gem-google-preview-paragraph {
+  position: relative;
+  display: block;
+  margin-block: 0.35rem;
+}
+
+:host ::ng-deep .gem-google-preview-paragraph > span {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+:host ::ng-deep .ProseMirror p:has(.gem-google-preview) {
+  margin-block: 0.35rem;
+}
+
+:host ::ng-deep .gem-google-preview-icon {
+  display: inline-flex;
+  flex: 0 0 2rem;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  color: #fff;
+  font-weight: 700;
+  text-align: center;
+}
+
+:host ::ng-deep .gem-google-preview-icon svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+}
+
+:host ::ng-deep .gem-google-preview-icon-docs { background: #4285f4; }
+:host ::ng-deep .gem-google-preview-icon-sheets { background: #0f9d58; }
+:host ::ng-deep .gem-google-preview-icon-drive { background: #fbbc04; }
+:host ::ng-deep .gem-google-source-link {
+  display: none;
+}
+
+:host ::ng-deep .gem-google-preview-details {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 0.12rem;
+}
+
+:host ::ng-deep .gem-google-preview-type { color: var(--tt-text, #111827); font-weight: 600; }
+:host ::ng-deep .gem-google-preview-domain { overflow: hidden; color: var(--tt-text-muted, #6b7280); font-size: 0.7rem; text-overflow: ellipsis; white-space: nowrap; }
+:host ::ng-deep .gem-google-preview-open {
+  flex: 0 0 auto;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--tt-primary, #144373) 35%, transparent);
+  border-radius: 0.4rem;
+  background: color-mix(in srgb, var(--tt-primary, #144373) 10%, transparent);
+  color: var(--tt-primary, #144373);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+:host ::ng-deep .gem-google-preview-open:hover { background: color-mix(in srgb, var(--tt-primary, #144373) 18%, transparent); }

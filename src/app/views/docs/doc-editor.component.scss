@@ -41,6 +41,7 @@
 
 .doc-surface-inner {
   --doc-page-inline-padding: clamp(1rem, 5vw, 4rem);
+  position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;

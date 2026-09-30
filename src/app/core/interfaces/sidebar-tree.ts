@@ -1,7 +1,7 @@
 export interface SidebarDocItem {
   id: string;
   titulo: string;
-  espacioId: string;
+  espacioId: string | null;
 }
 
 export interface SidebarSpace {

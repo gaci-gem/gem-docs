@@ -1,17 +1,32 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Observable, tap } from 'rxjs';
 import { environment } from '@/environments/environment';
-import { Vault } from '@core/interfaces/vault';
+import { Vault, VaultCreate } from '@core/interfaces/vault';
+
+const STORAGE_KEY = 'gem-docs.active-vault';
 
 @Injectable({ providedIn: 'root' })
 export class VaultService {
-  private readonly http = inject(HttpClient);
-  private readonly apiUrl = `${environment.API_URL}/vaults`;
-  readonly activeVault = signal<Vault | null>(null);
+  private http = inject(HttpClient);
+  private apiUrl = `${environment.API_URL}/vaults`;
+  readonly active = signal<Vault | null>(null);
 
-  load(): void {
-    this.http.get<Vault[]>(this.apiUrl).subscribe((vaults) => {
-      this.activeVault.set(vaults.find((vault) => vault.isDefault) ?? vaults[0] ?? null);
-    });
+  list(): Observable<Vault[]> { return this.http.get<Vault[]>(this.apiUrl); }
+  load(): Observable<Vault[]> { return this.initialize(); }
+  create(dto: VaultCreate): Observable<Vault> { return this.http.post<Vault>(this.apiUrl, dto); }
+
+  initialize(): Observable<Vault[]> {
+    return this.list().pipe(tap(vaults => {
+      const stored = sessionStorage.getItem(STORAGE_KEY);
+      const selected = vaults.find(v => v.id === stored) ?? vaults.find(v => v.isDefault) ?? vaults[0] ?? null;
+      this.active.set(selected);
+      if (selected) sessionStorage.setItem(STORAGE_KEY, selected.id);
+    }));
+  }
+
+  select(vault: Vault): void {
+    this.active.set(vault);
+    sessionStorage.setItem(STORAGE_KEY, vault.id);
   }
 }

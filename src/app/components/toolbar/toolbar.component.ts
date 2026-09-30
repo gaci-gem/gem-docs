@@ -1,4 +1,4 @@
-import { Component, inject, input, output } from '@angular/core';
+import { Component, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgIcon } from '@ng-icons/core';
 import { MenuModule } from 'primeng/menu';
@@ -25,6 +25,12 @@ import { ToolbarService } from './toolbar.service';
         </div>
         <div class="toolbar-separator"></div>
 
+        <div class="toolbar-group" role="group" aria-label="Lists">
+          <button class="toolbar-btn" title="Lista con viñetas" [class.toolbar-btn-active]="toolbarService.isActive('bulletList')" (click)="toolbarService.execCmd('toggleBulletList')" type="button"><ng-icon name="lucideList" size="16" /></button>
+          <button class="toolbar-btn" title="Lista numerada" [class.toolbar-btn-active]="toolbarService.isActive('orderedList')" (click)="toolbarService.execCmd('toggleOrderedList')" type="button"><ng-icon name="lucideListOrdered" size="16" /></button>
+        </div>
+        <div class="toolbar-separator"></div>
+
         <div class="toolbar-group">
           <button class="toolbar-btn" title="Código en línea" [class.toolbar-btn-active]="toolbarService.isActive('code')" (click)="toolbarService.execCmd('toggleCode')" type="button"><ng-icon name="lucideCode" size="16" /></button>
           <button class="toolbar-btn" title="Cita" [class.toolbar-btn-active]="toolbarService.isActive('blockquote')" (click)="toolbarService.execCmd('toggleBlockquote')" type="button"><ng-icon name="lucideQuote" size="16" /></button>
@@ -42,8 +48,8 @@ import { ToolbarService } from './toolbar.service';
       <div class="toolbar-right">
         <button class="btn-properties" [attr.aria-label]="propertiesVisible() ? 'Ocultar propiedades' : 'Mostrar propiedades'" [title]="propertiesVisible() ? 'Ocultar propiedades' : 'Mostrar propiedades'" (click)="toggleProperties.emit()" type="button"><ng-icon [name]="propertiesVisible() ? 'lucidePanelRightClose' : 'lucidePanelRightOpen'" size="16" /></button>
         <button class="btn-properties" aria-label="Guardar" title="Guardar (Ctrl+S)" (click)="save.emit()" type="button"><ng-icon name="lucideSave" size="16" /></button>
-        <button class="btn-properties" aria-label="Más opciones" title="Más opciones" (click)="menu.toggle($event)" type="button" aria-haspopup="true" [attr.aria-expanded]="false"><ng-icon name="lucideMoreHorizontal" size="16" /></button>
-        <p-menu #menu [model]="items" [popup]="true" appendTo="body" />
+        <button class="btn-properties" aria-label="Más opciones" title="Más opciones" (click)="menu.toggle($event)" type="button" aria-haspopup="true" [attr.aria-expanded]="menuOpen()"><ng-icon name="lucideMoreHorizontal" size="16" /></button>
+        <p-menu #menu [model]="items" [popup]="true" appendTo="body" (onShow)="menuOpen.set(true)" (onHide)="menuOpen.set(false)" />
         <span class="status-indicator" [class.status-saved]="toolbarService.saveStatus() === 'saved'" [class.status-error]="toolbarService.saveStatus() === 'error'" role="status" aria-live="polite">
           @switch (toolbarService.saveStatus()) {
             @case ('dirty') { <span>Sin guardar</span> }
@@ -64,7 +70,10 @@ export class ToolbarComponent {
   exportPdf = output<void>();
   viewMetadata = output<void>();
   toggleProperties = output<void>();
+  viewModeChange = output<'code' | 'graph' | 'both'>();
+  viewMode = input<'code' | 'graph' | 'both'>('code');
   propertiesVisible = input(true);
+  protected readonly menuOpen = signal(false);
 
   protected toolbarService = inject(ToolbarService);
 
@@ -73,8 +82,6 @@ export class ToolbarComponent {
   }
 
   protected readonly items: MenuItem[] = [
-    { label: 'Ver propiedades', icon: 'pi pi-tag', command: () => this.viewMetadata.emit() },
-    { separator: true },
     { label: 'Importar .docx', icon: 'pi pi-upload', command: () => this.importDoc.emit() },
     { separator: true },
     { label: 'Exportar a .docx', icon: 'pi pi-file-word', title: 'Template GEM Default, alta fidelidad', command: () => this.exportDocx.emit() },
