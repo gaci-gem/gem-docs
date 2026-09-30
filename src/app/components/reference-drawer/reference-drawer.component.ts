@@ -6,6 +6,7 @@ import { UsuarioCompleto } from '@core/interfaces/usuario';
 import { EventoService } from '@core/services/evento.service';
 import { ReferenceDrawerService, ReferenceTarget } from '@core/services/reference-drawer.service';
 import { UsuarioService } from '@core/services/usuario';
+import { environment } from '@/environments/environment';
 
 @Component({
   selector: 'app-reference-drawer',
@@ -55,6 +56,10 @@ export class ReferenceDrawerComponent {
 
   eventCode(event: EventoCompleto): string {
     return `${event.tipoCodigo}-${String(event.numero).padStart(3, '0')}`;
+  }
+
+  eventUrl(event: EventoCompleto): string | null {
+    return event.id ? `${environment.GEM_WEB_URL.replace(/\/$/, '')}/evento/evento/${event.id}` : null;
   }
 
   private load(target: Exclude<ReferenceTarget, null>): Observable<UsuarioCompleto | EventoCompleto> {

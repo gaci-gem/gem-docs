@@ -18,6 +18,11 @@ export const VIEWS_ROUTES: Routes = [
     data: { title: 'Inicio' },
   },
   {
+    path: 'vaults',
+    loadComponent: () => import('./vaults/vaults.component').then(mod => mod.VaultsComponent),
+    data: { title: 'Vaults' },
+  },
+  {
     path: 'docs',
     component: DocsListComponent,
     data: { title: 'Documentos' },

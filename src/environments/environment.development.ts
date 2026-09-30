@@ -12,6 +12,7 @@ export const environment = {
 
   API_URL: 'http://localhost:4000',
   GEM_WEB_URL: 'http://localhost:4200',
+  GEM_DOCS_URL: 'http://localhost:4201',
 
   loginUrl: 'http://localhost:4200/login',
   apiBaseUrl: 'http://localhost:4000',

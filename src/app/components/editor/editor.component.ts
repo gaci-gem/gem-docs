@@ -38,7 +38,6 @@ import { TaskItem } from '@tiptap/extension-task-item';
 import { Markdown } from 'tiptap-markdown';
 import TurndownService from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
-import { ToolbarService } from '../toolbar/toolbar.service';
 import { ImageLightboxService } from '@core/services/image-lightbox.service';
 import { environment } from '@/environments/environment';
 import { Router } from '@angular/router';
@@ -102,7 +101,6 @@ type SaveStatus = 'saved' | 'saving' | 'idle';
   styleUrl: './editor.component.scss',
 })
 export class EditorComponent implements ControlValueAccessor {
-  private toolbarService = inject(ToolbarService);
   private imageLightbox = inject(ImageLightboxService);
   private destroyRef = inject(DestroyRef);
   private usuarioService = inject(UsuarioService);
@@ -173,7 +171,6 @@ export class EditorComponent implements ControlValueAccessor {
 
     // Cleanup when the host component is destroyed.
     this.destroyRef.onDestroy(() => {
-      this.toolbarService.setEditor(null);
       this.editor?.destroy();
     });
   }
@@ -345,7 +342,6 @@ export class EditorComponent implements ControlValueAccessor {
 
     this.isInitialized = true;
     // Register editor with ToolbarService
-    this.toolbarService.setEditor(this.editor);
     this.ready.emit();
 
     // After initialization, force-load the parent's initialContent (the

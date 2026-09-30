@@ -7,15 +7,20 @@ import { EspacioService } from '@core/services/espacio.service';
 import { AuthService } from '@core/services/auth';
 import { UserStorageService } from '@core/services/user-storage';
 import { DocExportService } from '@core/services/doc-export.service';
+import { VaultService } from '@core/services/vault.service';
 import { SaveStatus, ToolbarService } from '../../components/toolbar/toolbar.service';
-import { EditorComponent, TiptapConfig } from '../../components/editor/editor.component';
+import { MilkdownEditorComponent } from '../../components/milkdown-editor/milkdown-editor.component';
 import { ToolbarComponent } from '../../components/toolbar/toolbar.component';
 import { ImportDocDialogComponent } from './components/import-doc-dialog/import-doc-dialog.component';
 import { MetadataDialogComponent } from './components/metadata-dialog/metadata-dialog.component';
+import { PropertiesPanelComponent } from './components/properties-panel/properties-panel.component';
 import { ImageLightboxComponent } from '../../components/image-lightbox/image-lightbox.component';
 import { Espacio } from '@core/interfaces/espacio';
 import { DocMetadata } from '@core/interfaces/doc-metadata';
 import { ReferenceDrawerService, ReferenceTarget } from '@core/services/reference-drawer.service';
+import { forkJoin } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
+import { ImageUploadService } from '@core/services/image-upload.service';
 
 /**
  * Fallback metadata for a doc that the backend hasn't populated yet (no
@@ -37,6 +42,13 @@ const EMPTY_METADATA: DocMetadata = {
   titulo: null,
   eventoId: null,
 };
+
+const NEW_DOCUMENT_CONTENT = `---
+tipo: pagina
+estado: DRAFT
+---
+
+`;
 import { MenuItem } from 'primeng/api';
 import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription, debounceTime, Subject } from 'rxjs';
@@ -45,7 +57,7 @@ import { showError, showInfo } from '../../utils/message-utils';
 @Component({
   selector: 'app-doc-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [EditorComponent, ToolbarComponent, ImportDocDialogComponent, MetadataDialogComponent, ImageLightboxComponent, RouterLink, BreadcrumbModule],
+  imports: [MilkdownEditorComponent, ToolbarComponent, ImportDocDialogComponent, MetadataDialogComponent, PropertiesPanelComponent, ImageLightboxComponent, RouterLink, BreadcrumbModule],
   styleUrl: './doc-editor.component.scss',
   template: `
     <div class="doc-editor-page">
@@ -58,12 +70,17 @@ import { showError, showInfo } from '../../utils/message-utils';
         (importDoc)="openImportDialog()"
         (exportDocx)="exportDocx()"
         (exportPdf)="exportPdf()"
-        (viewMetadata)="openMetadataDialog()"
+        (viewMetadata)="openPropertiesPanel()"
+         (toggleProperties)="togglePropertiesPanel()"
+         (viewModeChange)="setViewMode($event)"
+         [viewMode]="viewMode()"
+        [propertiesVisible]="showPropertiesPanel()"
       />
 
-      <!-- Infinite page surface — scrolls as one -->
-      <div class="doc-surface">
-        <div class="doc-surface-inner">
+      <div class="editor-layout">
+        <!-- Infinite page surface — scrolls as one -->
+        <div class="doc-surface">
+          <div class="doc-surface-inner">
           <!-- Title inline — part of the document, not a separate input -->
           <div
             #titleEl
@@ -75,12 +92,26 @@ import { showError, showInfo } from '../../utils/message-utils';
           ></div>
 
           <!-- Editor flows naturally after the title -->
-            <app-editor
-            [initialContent]="contenido()"
-            (contentChange)="onContentChange($event)"
-            (referenceOpen)="openReference($event)"
-          />
+            <app-milkdown-editor
+             [initialContent]="contenido()"
+             [documentId]="docId"
+             (contentChange)="onContentChange($event)"
+              (referenceOpen)="openReference($event)"
+              (blurEvent)="onEditorBlur()"
+              [viewMode]="viewMode()"
+              (mermaidRenderStatus)="onMermaidRenderStatus($event)"
+            />
+          </div>
         </div>
+        @if (showPropertiesPanel()) {
+          <app-properties-panel
+             [markdown]="contenido()"
+             [documents]="propertyDocuments()"
+             [spaceId]="espacioId"
+            (markdownChange)="onContentChange($event)"
+            (close)="showPropertiesPanel.set(false)"
+          />
+        }
       </div>
 
       </div>
@@ -106,6 +137,7 @@ import { showError, showInfo } from '../../utils/message-utils';
   `,
 })
 export class DocEditorComponent {
+  private imageUpload = inject(ImageUploadService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private docService = inject(DocService);
@@ -113,17 +145,19 @@ export class DocEditorComponent {
   private authService = inject(AuthService);
   private userStorage = inject(UserStorageService);
   private toolbarService = inject(ToolbarService);
+  private vaultService = inject(VaultService);
   private messageService = inject(MessageService);
   private exportService = inject(DocExportService);
   private destroyRef = inject(DestroyRef);
   private referenceDrawer = inject(ReferenceDrawerService);
 
   @ViewChild('titleEl', { static: true }) titleEl!: ElementRef<HTMLElement>;
+  @ViewChild(MilkdownEditorComponent) private milkdownEditor?: MilkdownEditorComponent;
 
   docId: string | null = null;
   titulo = '';
   espacioId = '';
-  contenido = signal('');
+  contenido = signal(NEW_DOCUMENT_CONTENT);
   saving = signal(false);
   creatingSpace = signal(false);
   espacios = signal<Espacio[]>([]);
@@ -131,8 +165,11 @@ export class DocEditorComponent {
   showNewSpace = signal(false);
   showImportDialog = signal(false);
   showMetadataDialog = signal(false);
+  showPropertiesPanel = signal(true);
+  viewMode = signal<'code' | 'graph' | 'both'>('graph');
   /** Loaded doc payload (null while loading or when creating a new doc). */
   currentDoc = signal<{ id: string; metadata: DocMetadata } | null>(null);
+  propertyDocuments = signal<{ content: string }[]>([]);
   /** Convenience computed — feeds the metadata dialog input. */
   currentMetadata = computed(() => this.currentDoc()?.metadata ?? EMPTY_METADATA);
   newSpaceName = '';
@@ -140,6 +177,18 @@ export class DocEditorComponent {
   espacioNombre = signal('');
   breadcrumbItems = signal<MenuItem[]>([]);
   breadcrumbHome: MenuItem = { icon: 'pi pi-home', routerLink: '/home' };
+
+  setViewMode(mode: 'code' | 'graph' | 'both'): void { this.viewMode.set(mode); }
+
+  onEditorBlur(): void {
+    // Both is an intentional persistent preference; leaving the editor should
+    // only collapse a plain Code view into the default Graph view.
+    if (this.viewMode() === 'code') this.viewMode.set('graph');
+  }
+
+  onMermaidRenderStatus(success: boolean): void {
+    if (!success && this.viewMode() === 'graph') this.viewMode.set('code');
+  }
 
   openReference(target: Exclude<ReferenceTarget, null>): void {
     if (target.type === 'user') this.referenceDrawer.openUser(target.id);
@@ -155,7 +204,8 @@ export class DocEditorComponent {
 
   constructor() {
     document.body.classList.add('editing-doc');
-    this.loadSpaces();
+    this.vaultService.initialize().subscribe(() => this.loadSpaces());
+    this.loadPropertyDocuments();
 
     // Subscribe to route param changes to handle navigation between docs.
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
@@ -164,10 +214,10 @@ export class DocEditorComponent {
         this.docId = newId;
         if (this.docId) {
           this.loadDoc(this.docId);
-        } else {
-          // New doc mode - reset fields
-          this.titulo = '';
-          this.contenido.set('');
+          } else {
+            // New doc mode - reset fields
+            this.titulo = '';
+            this.contenido.set(NEW_DOCUMENT_CONTENT);
           this.savedSnapshot = { titulo: '', contenido: '' };
           this.setSaveStatus('idle');
           this.titleEl.nativeElement.innerText = '';
@@ -209,19 +259,19 @@ export class DocEditorComponent {
   }
 
   private loadDoc(id: string): void {
-    this.docService.getById(id).subscribe({
+    this.docService.getById(id, this.vaultService.active()?.id).subscribe({
       next: (doc) => {
         this.titulo = doc.titulo;
         this.titleEl.nativeElement.innerText = doc.titulo;
         this.contenido.set(doc.content);
-        this.espacioId = doc.espacioId;
+        this.espacioId = doc.espacioId ?? '';
         // Store the loaded doc so the metadata dialog can read its payload
         // without re-hitting the backend. Updates here cover the caso of a
         // brand-new doc just created via POST. metadata is required on Doc
         // (spec R15); backend always returns it (default `{}`), so we trust
         // the payload directly.
         this.currentDoc.set({ id: doc.id, metadata: doc.metadata });
-        this.loadEspacioNombre(doc.espacioId);
+        if (doc.espacioId) this.loadEspacioNombre(doc.espacioId);
         this.parseLinks(doc.content);
         this.savedSnapshot = { titulo: doc.titulo, contenido: doc.content };
         this.setSaveStatus('idle');
@@ -231,12 +281,9 @@ export class DocEditorComponent {
   }
 
   loadSpaces(): void {
-    this.espacioService.list().subscribe({
+    this.espacioService.list({ vaultId: this.vaultService.active()?.id }).subscribe({
       next: (espacios) => {
         this.espacios.set(espacios);
-        if (espacios.length > 0 && !this.espacioId) {
-          this.espacioId = espacios[0].id;
-        }
       },
       error: () => showError(this.messageService, 'Error', 'No se pudieron cargar los espacios')
     });
@@ -277,7 +324,7 @@ export class DocEditorComponent {
     this.espacioService.create({
       nombre: this.newSpaceName,
       descripcion: null
-    }).subscribe({
+    }, this.vaultService.active()?.id).subscribe({
       next: (newEspacio) => {
         this.newSpaceName = '';
         this.showNewSpace.set(false);
@@ -299,7 +346,7 @@ export class DocEditorComponent {
         nombre: eventoNombre,
         descripcion: `Espacio automático para evento: ${eventoNombre}`,
         parentId: null
-      }).subscribe({
+      }, this.vaultService.active()?.id).subscribe({
         next: (newEspacio) => {
           this.loadSpaces();
           this.espacioId = newEspacio.id;
@@ -333,20 +380,10 @@ export class DocEditorComponent {
       return;
     }
 
-    // For new docs without espacioId, create an event space automatically
-    let espacioId = this.espacioId;
-    if (!this.docId && !espacioId) {
-      try {
-        espacioId = await this.createEventSpace(this.titulo || 'Evento sin título');
-      } catch {
-        return; // Error already set in createEventSpace
-      }
-    }
-
-    this.startSave(true, espacioId);
+    this.startSave(true, this.espacioId || null);
   }
 
-  private startSave(manual: boolean, espacioId = this.espacioId): void {
+  private startSave(manual: boolean, espacioId: string | null = this.espacioId || null): void {
     if (this.saveInFlight) {
       if (manual) this.pendingManualSave = true;
       else this.pendingAutoSave = true;
@@ -360,8 +397,11 @@ export class DocEditorComponent {
     this.saving.set(true);
     this.setSaveStatus('saving');
     const observable = docId
-      ? this.docService.update(docId, { titulo, content: contenido }, manual ? undefined : { silent: true })
-      : this.docService.create({ titulo, content: contenido, espacioId: espacioId || 'default' }, manual ? undefined : { silent: true });
+      ? this.docService.update(docId, { titulo, content: contenido }, { ...(manual ? {} : { silent: true }), vaultId: this.vaultService.active()?.id })
+      : this.docService.create(
+        { titulo, content: contenido, espacioId: espacioId || null },
+        { ...(manual ? {} : { silent: true }), vaultId: this.vaultService.active()?.id },
+      );
 
     observable.subscribe({
       next: (result) => {
@@ -441,17 +481,28 @@ export class DocEditorComponent {
     this.showImportDialog.set(true);
   }
 
-  /**
-   * Open the metadata dialog (triggered from the toolbar).
-   *
-   * Guard: we only open when a doc is currently loaded. In "new doc" mode
-   * there's no metadata to show — opening would just flash 9 em-dash rows,
-   * which is information the user already has (no doc loaded yet).
-   * The toolbar's disabled state covers the "no editor" case.
-   */
+  /** Open the editable properties panel (triggered from the toolbar). */
   openMetadataDialog(): void {
-    if (this.currentDoc() === null) return;
-    this.showMetadataDialog.set(true);
+    this.openPropertiesPanel();
+  }
+
+  private loadPropertyDocuments(): void {
+    // Keep lightweight test doubles and embedded callers compatible while the
+    // editor enriches the existing document list with content for suggestions.
+    if (typeof this.docService.list !== 'function') return;
+    this.docService.list({ silent: true }).subscribe({
+      next: (docs) => forkJoin(docs.map((doc) => this.docService.getById(doc.id))).subscribe({
+        next: (documents) => this.propertyDocuments.set(documents),
+      }),
+    });
+  }
+
+  openPropertiesPanel(): void {
+    if (this.currentDoc() !== null || this.contenido().trim()) this.showPropertiesPanel.set(true);
+  }
+
+  togglePropertiesPanel(): void {
+    this.showPropertiesPanel.update((visible) => !visible);
   }
 
   /**
@@ -469,7 +520,8 @@ export class DocEditorComponent {
     }
     try {
       showInfo(this.messageService, 'Exportando', 'Generando .docx...');
-      await this.exportService.exportDocx(markdown, title);
+      const references = await this.milkdownEditor?.getExportReferenceCatalog() ?? [];
+      await this.exportService.exportDocx(markdown, title, this.docId, references);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error desconocido';
       showError(this.messageService, 'Error al exportar', msg);
@@ -490,7 +542,8 @@ export class DocEditorComponent {
     }
     try {
       showInfo(this.messageService, 'Exportando', 'Generando .pdf...');
-      await this.exportService.exportPdf(markdown, title);
+      const references = await this.milkdownEditor?.getExportReferenceCatalog() ?? [];
+      await this.exportService.exportPdf(markdown, title, this.docId, references);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error desconocido';
       showError(this.messageService, 'Error al exportar', msg);
@@ -508,7 +561,7 @@ export class DocEditorComponent {
    * Mode 'append': appends the imported markdown at the end of current content,
    *                separated by a horizontal rule so the boundary is visible.
    */
-  onImportConfirm(payload: { markdown: string; suggestedTitle: string; mode: 'replace' | 'append' }): void {
+  async onImportConfirm(payload: { markdown: string; suggestedTitle: string; mode: 'replace' | 'append'; imagesBase64: string[] }): Promise<void> {
     this.showImportDialog.set(false);
 
     // Title replacement — only when the doc has no title yet, OR when replacing.
@@ -522,17 +575,45 @@ export class DocEditorComponent {
       this.markDirty();
     }
 
-    // Content
+    // Content. Keep imported data URIs private to the import transaction; the
+    // document must exist before uploads can be assigned to its assets folder.
+    let importedContent: string;
     if (payload.mode === 'append') {
       // Append with a visible separator; if there's no existing content,
       // just use the imported markdown directly.
       const current = this.contenido();
       const separator = current.trim().length > 0 ? '\n\n---\n\n' : '';
-      this.contenido.set(current + separator + payload.markdown);
+      importedContent = current + separator + payload.markdown;
     } else {
-      this.contenido.set(payload.markdown);
+      importedContent = payload.markdown;
     }
-    this.markDirty();
-    this.autoSaveSubject.next();
+    try {
+      const docId = await this.ensureDocumentForImport(importedContent);
+      let finalContent = importedContent;
+      for (let i = 0; i < payload.imagesBase64.length; i++) {
+        const dataUri = payload.imagesBase64[i];
+        const upload = await firstValueFrom(this.imageUpload.uploadBase64(dataUri, `imported-${i}`, docId));
+        finalContent = finalContent.split(dataUri).join(upload.url);
+      }
+      this.onContentChange(finalContent);
+      await firstValueFrom(this.docService.update(docId, { titulo: this.titulo, content: finalContent }, { vaultId: this.vaultService.active()?.id }));
+      this.savedSnapshot = { titulo: this.titulo, contenido: finalContent };
+      this.docService.notifyChanges();
+    } catch (err) {
+      const failure = err as { error?: { message?: string }; message?: string };
+      showError(this.messageService, 'Error al importar', failure.error?.message || failure.message || 'No se pudo guardar la importación');
+    }
+  }
+
+  private async ensureDocumentForImport(content: string): Promise<string> {
+    if (this.docId) return this.docId;
+    const created = await firstValueFrom(this.docService.create(
+      { titulo: this.titulo, content, espacioId: this.espacioId || null },
+      { vaultId: this.vaultService.active()?.id },
+    ));
+    this.docId = created.id;
+    this.currentDoc.set({ id: created.id, metadata: created.metadata });
+    await this.router.navigate(['/docs', created.id]);
+    return created.id;
   }
 }

@@ -13,6 +13,7 @@ export const environment = {
   // Replaced at container startup by entrypoint.sh via environment variables
   API_URL: '__API_URL__',
   GEM_WEB_URL: '__GEM_WEB_URL__',
+  GEM_DOCS_URL: '__GEM_DOCS_URL__',
 
   // Cross-app shared auth fields using placeholders
   loginUrl: '__GEM_WEB_URL__/login',

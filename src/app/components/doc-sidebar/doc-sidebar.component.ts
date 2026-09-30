@@ -13,6 +13,7 @@ import { ConfirmationService } from 'primeng/api';
 import { MessageService } from 'primeng/api';
 import { DocService } from '@core/services/doc.service';
 import { EspacioService } from '@core/services/espacio.service';
+import { VaultService } from '@core/services/vault.service';
 import { Doc } from '@core/interfaces/doc';
 import { Espacio } from '@core/interfaces/espacio';
 import { SidebarSpace, SidebarDocItem } from '@core/interfaces/sidebar-tree';
@@ -32,17 +33,12 @@ import { filter } from 'rxjs/operators';
     <div class="doc-sidebar">
       <!-- Header -->
       <div class="sidebar-header">
-        <div class="d-flex align-items-center gap-2">
-          <div class="logo-icon">
-            <ng-icon name="tabler-folder-open" size="13" />
-          </div>
-          <span class="sidebar-title">GEM Docs</span>
-        </div>
-        <div class="header-actions">
-          <button class="btn-new" title="Nuevo espacio" (click)="openCreateDialog(null)">
-            <ng-icon name="tabler-plus" size="14" />
-          </button>
-        </div>
+         <a class="vault-link d-flex align-items-center gap-2" routerLink="/vaults" title="Cambiar vault">
+           <div class="logo-icon">
+             <ng-icon name="tabler-folder-open" size="13" />
+           </div>
+           <span class="sidebar-title">{{ vaultService.active()?.name ?? 'GEM Docs' }}</span>
+         </a>
       </div>
 
       <!-- Tree -->
@@ -51,8 +47,20 @@ import { filter } from 'rxjs/operators';
           <div class="sidebar-loading">
             <div class="spinner-border spinner-border-sm text-muted" role="status"></div>
           </div>
-        } @else {
-          @for (entry of getFlattenedSpaces(); track entry.space.id) {
+         } @else {
+           @if (rootDocs().length > 0) {
+             <div class="space-docs root-docs">
+               @for (doc of rootDocs(); track doc.id) {
+                 <div class="doc-row">
+                   <a [routerLink]="['/docs', doc.id]" class="doc-item" [class.active]="isActive(doc.id)" (click)="selectDoc(doc.id)" [pTooltip]="doc.titulo" tooltipPosition="right">
+                     <span class="doc-icon"><ng-icon name="tabler-file-text" size="14" /></span>
+                     <span class="doc-title">{{ doc.titulo }}</span>
+                   </a>
+                 </div>
+               }
+             </div>
+           }
+           @for (entry of getFlattenedSpaces(); track entry.space.id) {
             <div class="space-group" [style.padding-left.px]="entry.depth * 16">
               <div class="space-row">
                 <!-- Expand/collapse (click on name) -->
@@ -170,7 +178,7 @@ import { filter } from 'rxjs/operators';
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0.75rem 1rem;
+      padding: 0.625rem 0.75rem;
       border-bottom: 1px solid var(--ins-border-color);
     }
 
@@ -186,32 +194,16 @@ import { filter } from 'rxjs/operators';
       flex-shrink: 0;
     }
 
+    .vault-link {
+      min-width: 0;
+      color: inherit;
+      text-decoration: none;
+    }
+
     .sidebar-title {
       font-size: 0.875rem;
       font-weight: 600;
       color: var(--ins-body-color);
-    }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 0.25rem;
-      position: relative;
-    }
-
-    .btn-new {
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: var(--ins-tertiary-color);
-      padding: 0.25rem;
-      border-radius: 4px;
-      display: flex;
-      align-items: center;
-      &:hover {
-        background: var(--ins-tertiary-bg);
-        color: var(--ins-body-color);
-      }
     }
 
     .sidebar-tree {
@@ -400,12 +392,14 @@ import { filter } from 'rxjs/operators';
 export class DocSidebarComponent {
   private docService = inject(DocService);
   private espacioService = inject(EspacioService);
+  vaultService = inject(VaultService);
   private router = inject(Router);
   private confirmationService = inject(ConfirmationService);
   private messageService = inject(MessageService);
   private destroyRef = inject(DestroyRef);
 
   spaces = signal<SidebarSpace[]>([]);
+  rootDocs = signal<{ id: string; titulo: string; espacioId: string | null }[]>([]);
   loading = signal(true);
   activeDocId = signal<string | null>(null);
   // Inline edit mode: spaceId (rename only) or null
@@ -420,7 +414,8 @@ export class DocSidebarComponent {
   docMenuFor = signal<string | null>(null);
 
   constructor() {
-    this.loadTree();
+    this.vaultService.initialize().subscribe(() => this.loadTree());
+    if (!this.vaultService.active()) this.loadTree();
 
     // Subscribe to doc changes — refresh tree when a doc is created/updated.
     // Silent refresh: background update from autosave shouldn't trigger global spinner.
@@ -458,9 +453,10 @@ export class DocSidebarComponent {
     if (showLoading) this.loading.set(true);
 
     // Load all docs and spaces in parallel
-    this.docService.list(options).subscribe({
+    const vaultId = this.vaultService.active()?.id;
+    this.docService.list({ ...options, vaultId }).subscribe({
       next: (docs) => {
-        this.espacioService.list(options).subscribe({
+        this.espacioService.list({ ...options, vaultId }).subscribe({
           next: (espacios) => {
             // Build space nodes with docs attached
             const spaceMap = new Map<string, SidebarSpace>();
@@ -494,6 +490,7 @@ export class DocSidebarComponent {
             });
 
             this.spaces.set(rootSpaces);
+            this.rootDocs.set(docs.filter(d => d.espacioId === null).map(d => ({ id: d.id, titulo: d.titulo, espacioId: d.espacioId })));
             if (showLoading) this.loading.set(false);
           },
           error: () => { if (showLoading) this.loading.set(false); },
@@ -631,8 +628,15 @@ export class DocSidebarComponent {
         // resolve, otherwise the menu stays visible during the request and
         // appears to "reopen" when loadTree() re-renders the tree below it.
         this.closeMenus();
-        this.espacioService.delete(id).subscribe({
-          next: () => this.loadTree(),
+        this.espacioService.delete(id, this.vaultService.active()?.id).subscribe({
+          next: () => {
+            const currentSpaceId = new URLSearchParams(this.router.url.split('?')[1] ?? '').get('espacioId');
+            if (currentSpaceId === id) {
+              void this.router.navigate(['/docs']);
+            } else {
+              this.loadTree();
+            }
+          },
           error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Error al eliminar espacio' })
         });
       },
@@ -653,8 +657,14 @@ export class DocSidebarComponent {
         // resolve, otherwise the menu stays visible during the request and
         // appears to "reopen" when loadTree() re-renders the tree below it.
         this.closeMenus();
-        this.docService.delete(id).subscribe({
-          next: () => this.loadTree(),
+        this.docService.delete(id, this.vaultService.active()?.id).subscribe({
+          next: () => {
+            if (this.activeDocId() === id) {
+              void this.router.navigate(['/docs']);
+            } else {
+              this.loadTree();
+            }
+          },
           error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Error al eliminar página' })
         });
       },

@@ -70,8 +70,7 @@ describe('editor references', () => {
        tipo: { color: '#2563eb' },
     } as import('@core/interfaces/evento').Evento])).toEqual([{
       id: 'event-1',
-      label: '#Actualizar backend',
-       description: 'CAS-002',
+       label: '#CAS-2 | Actualizar backend',
        color: '#2563eb',
     }]);
   });
@@ -105,10 +104,9 @@ describe('editor references', () => {
       email: 'ana@example.com',
       color: '#2f855a',
     }])).toEqual([{
-      id: 'user-1',
-      label: '@Ana Rossi',
-      description: '@arossi',
-      color: '#2f855a',
+       id: 'user-1',
+       label: '@Ana Rossi',
+       color: '#2f855a',
     }]);
   });
 
