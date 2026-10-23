@@ -1,6 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing'
 
 import { AppMenuComponent } from './app-menu.component'
+import { provideRouter } from '@angular/router'
+import { ensureBrowserStorage } from '../../../../../../testing/browser-storage'
+
+ensureBrowserStorage('localStorage')
 
 describe('AppMenuComponent', () => {
   let component: AppMenuComponent
@@ -9,6 +13,7 @@ describe('AppMenuComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AppMenuComponent],
+      providers: [provideRouter([])],
     }).compileComponents()
 
     fixture = TestBed.createComponent(AppMenuComponent)

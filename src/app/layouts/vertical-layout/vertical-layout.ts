@@ -9,6 +9,7 @@ import { debounceTime, fromEvent, Subscription } from 'rxjs'
 import { ShortcutTable } from "@layouts/components/shortcut-table/shortcut-table";
 // import { EventoCronometroComponent } from '@app/components/evento-cronometro';
 import { Footer } from '@layouts/components/footer/footer'
+import { ReferenceDrawerComponent } from '@app/components/reference-drawer/reference-drawer.component'
 // import { DrawerContainerComponent } from '@app/components/drawer-container/drawer-container'
 // import { GreetingBannerComponent } from '@app/components/greeting-banner/greeting-banner'
 import { DialogService } from 'primeng/dynamicdialog'
@@ -25,6 +26,7 @@ import { LayoutStoreService } from '@core/services/layout-store.service'
     ShortcutTable,
     // EventoCronometroComponent,
     Footer,
+    ReferenceDrawerComponent,
     // DrawerContainerComponent,
     // GreetingBannerComponent,
   ],

@@ -33,7 +33,7 @@ export class ImageUploadService {
    * Validates type and size before sending; rejects unsupported files locally
    * to avoid round-tripping bad data.
    */
-  upload(file: File): Observable<ImageUploadResult> {
+  upload(file: File, docId?: string): Observable<ImageUploadResult> {
     if (!ACCEPTED_TYPES.includes(file.type)) {
       throw {
         message: `Tipo de imagen no soportado: ${file.type || 'desconocido'}.`,
@@ -48,6 +48,7 @@ export class ImageUploadService {
 
     const formData = new FormData();
     formData.append('file', file, file.name);
+    if (docId) formData.append('docId', docId);
 
     return this.http.post<ImageUploadResult>(this.endpoint, formData).pipe(
       map((res) => ({ ...res, url: this.absoluteUrl(res.url) })),
@@ -59,12 +60,12 @@ export class ImageUploadService {
    * `mammoth.images.dataUri` strategy during .docx parsing). Convenience
    * wrapper around `upload()` — converts the data URI to a File first.
    */
-  uploadBase64(dataUri: string, filename = 'image'): Observable<ImageUploadResult> {
+  uploadBase64(dataUri: string, filename = 'image', docId?: string): Observable<ImageUploadResult> {
     const file = this.dataUriToFile(dataUri, filename);
     if (!file) {
       throw { message: 'data URI de imagen inválido.' };
     }
-    return this.upload(file);
+    return this.upload(file, docId);
   }
 
   /**

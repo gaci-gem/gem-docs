@@ -6,6 +6,8 @@
 /out-tsc
 /bazel-out
 
+.codegraph/
+
 # Node
 /node_modules
 npm-debug.log
@@ -34,6 +36,8 @@ src/assets/version.json
 .sass-cache/
 /connect.lock
 /coverage
+/playwright-report
+/test-results
 /libpeerconnection.log
 testem.log
 /typings

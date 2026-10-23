@@ -209,6 +209,7 @@ export interface Evento {
   proyectoId: number;
   productoId: number;
   moduloCodigo: string;
+  tipo?: EventoTipo;
 
   prioridadUsu: number;
   prioridadCal?: number;

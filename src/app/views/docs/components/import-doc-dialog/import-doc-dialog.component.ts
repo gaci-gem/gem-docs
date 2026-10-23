@@ -16,9 +16,7 @@ import { DialogModule } from 'primeng/dialog';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { MessageModule } from 'primeng/message';
 import { SelectButtonModule } from 'primeng/selectbutton';
-import { firstValueFrom } from 'rxjs';
 import { DocImportService, DocImportResult } from '@core/services/doc-import.service';
-import { ImageUploadService } from '@core/services/image-upload.service';
 
 export type ImportMode = 'replace' | 'append';
 
@@ -26,6 +24,7 @@ export interface ImportPayload {
   markdown: string;
   suggestedTitle: string;
   mode: ImportMode;
+  imagesBase64: string[];
 }
 
 const MODE_OPTIONS = [
@@ -275,12 +274,11 @@ const MODE_OPTIONS = [
 })
 export class ImportDocDialogComponent {
   private docImport = inject(DocImportService);
-  private imageUpload = inject(ImageUploadService);
 
   /** Two-way visibility binding — parent passes a signal/getter */
   visible = input<boolean>(false);
 
-  /** Emits when the user confirms the import (after image upload) */
+  /** Emits when the user confirms the import; the editor owns persisted-image upload. */
   imported = output<ImportPayload>();
 
   /** Emits when the dialog is closed (either confirm or cancel) */
@@ -388,8 +386,8 @@ export class ImportDocDialogComponent {
   }
 
   /**
-   * Confirm handler — uploads images (if any), then emits the final payload.
-   * Sequential uploads so we can show progress and keep errors localized.
+   * Confirm handler — emits the parsed payload. Images remain data URIs until
+   * the editor has created/saved the document and can provide its docId.
    */
   async confirm(): Promise<void> {
     const r = this.result();
@@ -398,48 +396,11 @@ export class ImportDocDialogComponent {
     this.confirmCancelled = false;
     this.errorMessage.set(null);
 
-    let finalMarkdown = r.markdown;
-
-    if (r.imagesBase64.length > 0) {
-      this.uploading.set(true);
-      this.totalImages.set(r.imagesBase64.length);
-      this.uploadedCount.set(0);
-
-      try {
-        for (let i = 0; i < r.imagesBase64.length; i++) {
-          if (this.confirmCancelled) {
-            this.uploading.set(false);
-            return;
-          }
-          const dataUri = r.imagesBase64[i];
-          const uploadRes = await firstValueFrom(
-            this.imageUpload.uploadBase64(dataUri, `imported-${i}`),
-          );
-          // Replace the base64 data URI in the markdown with the server URL.
-          // Data URIs can be long, so use split/join instead of a single
-          // .replace() to handle multiple occurrences safely.
-          finalMarkdown = finalMarkdown.split(dataUri).join(uploadRes.url);
-          this.uploadedCount.set(i + 1);
-        }
-      } catch (err) {
-        this.errorMessage.set(
-          (err as { message?: string })?.message ?? 'Error al subir imágenes.',
-        );
-        this.uploading.set(false);
-        return; // Don't emit — user can retry or cancel
-      }
-
-      if (this.confirmCancelled) {
-        this.uploading.set(false);
-        return;
-      }
-      this.uploading.set(false);
-    }
-
     this.imported.emit({
-      markdown: finalMarkdown,
+      markdown: r.markdown,
       suggestedTitle: r.suggestedTitle,
       mode: this.mode(),
+      imagesBase64: r.imagesBase64,
     });
     this.reset();
   }

@@ -8,7 +8,7 @@ export enum ContentSource {
 export interface Doc {
   id: string;
   titulo: string;
-  espacioId: string;
+  espacioId: string | null;
   autorId: string;
   contentSource: ContentSource;
   contentUrl: string | null;

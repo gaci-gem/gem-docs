@@ -12,6 +12,7 @@ import { LoadingService } from '@core/services/loading.service';
 import { LoadingSpinnerComponent } from './components/loading-spinner/loading-spinner';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { VaultService } from '@core/services/vault.service';
 
 @Component({
   selector: 'app-root',
@@ -30,6 +31,7 @@ export class App implements OnInit {
   private authService = inject(AuthService);
   private loadingService = inject(LoadingService);
   private cdr = inject(ChangeDetectorRef);
+  private vaultService = inject(VaultService);
 
   isLoading = false;
 
@@ -37,6 +39,7 @@ export class App implements OnInit {
     // Restore user from storage if token exists
     if (this.authService.isAuthenticated()) {
       this.authService.verifyToken().subscribe();
+      this.vaultService.load();
     }
 
     // Subscribe to loading state from LoadingService
