@@ -10,6 +10,36 @@ export interface AppVersion {
   build?: string;
 }
 
+interface SimpleSemver {
+  major: number;
+  minor: number;
+  patch: number;
+}
+
+function parseSimpleSemver(version: string | null): SimpleSemver | null {
+  const match = version?.trim().match(/^(\d+)\.(\d+)\.(\d+)$/);
+  if (!match) return null;
+
+  return {
+    major: Number(match[1]),
+    minor: Number(match[2]),
+    patch: Number(match[3]),
+  };
+}
+
+export function shouldShowChangelog(currentVersion: string | null, lastSeenVersion: string | null): boolean {
+  if (!currentVersion) return false;
+  if (!lastSeenVersion) return true;
+
+  const current = parseSimpleSemver(currentVersion);
+  const lastSeen = parseSimpleSemver(lastSeenVersion);
+  if (!current) return false;
+  if (!lastSeen) return true;
+
+  return current.major > lastSeen.major
+    || (current.major === lastSeen.major && current.minor > lastSeen.minor);
+}
+
 @Injectable({ providedIn: 'root' })
 export class VersionService {
   private version$?: Observable<AppVersion>;

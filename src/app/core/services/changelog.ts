@@ -6,6 +6,13 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.2.1',
+    date: '2026-10-23',
+    changes: [
+      'Corregimos el popup automático de Novedades para ignorar cambios de versión patch y mostrarlo solo ante cambios minor o major.',
+    ],
+  },
+  {
     version: '0.2.0',
     date: '2026-09-30',
     changes: [
